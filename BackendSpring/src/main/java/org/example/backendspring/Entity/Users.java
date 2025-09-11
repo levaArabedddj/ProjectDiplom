@@ -6,6 +6,7 @@ import lombok.*;
 import org.example.backendspring.Enun.Gender;
 import org.example.backendspring.Enun.UserRole;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Setter
@@ -17,7 +18,7 @@ import java.util.List;
 public class Users {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private long user_id;
+    private Long user_id;
     @Column(unique = true)
     private String gmail;
 
@@ -40,6 +41,9 @@ public class Users {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserActivity> activities;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Trip> trips = new ArrayList<>();
 
     @Column(unique = true)
     private Long telegramChatId;

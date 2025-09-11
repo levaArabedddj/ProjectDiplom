@@ -128,16 +128,32 @@ public class OpenAIService {
             Составь краткую карточку:
             1. Интересное описание города (5-6 предложения).
             2. Лучший сезон для поездки.
-            3. Средний бюджет поездки на 1 человека (примерная сумма в евро) И детали на что уйдет больше денег тут.
+            3. Средний бюджет поездки на 1 человека (примерная сумма в евро).
             4. Список топ-10 достопримечательностей или мест куда следует сходить.
             5.Напиши также обязательные правила что нельзя тут делать и почему.
+            6.Средняя температура по сезонам.
+            7.Транспорт как можно добратся до этого города.
+            8.Как перемещаться внутри города - Транспорт (метро, автобус, велопрокат) - Стоимость билета.
+            9.Без платные активности в городе.
+            10.Цена на разное жилье на ночь. Например - Хостел-30евро ночь.Напиши как минимум 4-5 видов жилья.
+            11.Советы и лайфхаки в городе.
+            12.Безопасность в городе но чего следует остерегатся.
+            13.Языки используемые в этом городе.
             Отвечай строго в формате JSON без дополнительных комментариев и без - ```:
             {
               "description": "...",
               "bestSeason": "...",
               "averageBudget": "...",
               "attractions": ["...", "...", "..."],
-              "rule":"..."
+              "rule":"...",
+              "weatherBySeason":{"Весна":"15°C","Лето":"27°C"},
+              "howToGet":"...",
+              "transportInside":{"Метро":"2€/поездка","Велопрокат":"10€/день"},
+              "freeActivities":["...", "...", "..."],
+              "accommodation":{"Хостел":"30€/ночь","Отель":"100€/ночь"},
+              "travelTips":["...", "...", "..."],
+              "safety":"...",
+              "languages":"..."
             }
             """.formatted(place.getName());
 
@@ -151,15 +167,35 @@ public class OpenAIService {
                 gptResponse.get("description").asText(),
                 gptResponse.get("bestSeason").asText(),
                 gptResponse.get("averageBudget").asText(),
+                convertJsonArray(gptResponse.get("attractions")),
                 gptResponse.get("rule").asText(),
-                convertJsonArray(gptResponse.get("attractions"))
+                convertJsonMap(gptResponse.get("weatherBySeason")),
+                gptResponse.get("howToGet").asText(),
+                convertJsonMap(gptResponse.get("transportInside")),
+                convertJsonArray(gptResponse.get("freeActivities")),
+                convertJsonMap(gptResponse.get("accommodation")),
+                convertJsonArray(gptResponse.get("travelTips")),
+                gptResponse.get("safety").asText(),
+                gptResponse.get("languages").asText()
         );
     }
 
     private List<String> convertJsonArray(JsonNode array) {
         List<String> list = new ArrayList<>();
-        array.forEach(node -> list.add(node.asText()));
+        if (array != null && array.isArray()) {
+            array.forEach(node -> list.add(node.asText()));
+        }
         return list;
+    }
+
+    private Map<String, String> convertJsonMap(JsonNode mapNode) {
+        Map<String, String> map = new HashMap<>();
+        if (mapNode != null && mapNode.isObject()) {
+            mapNode.fieldNames().forEachRemaining(key ->
+                    map.put(key, mapNode.get(key).asText())
+            );
+        }
+        return map;
     }
 
     public JsonNode askGpt(String prompt) {

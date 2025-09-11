@@ -1,4 +1,4 @@
-package org.example.backendspring.Dto;
+package org.example.backendspring.Dto.DtoAmadeus.Fly;
 
 import lombok.Data;
 
