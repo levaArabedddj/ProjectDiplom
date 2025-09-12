@@ -6,7 +6,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class PlaceToVisitDto {
+public class PlaceCartDto {
     private Long id;
     private String name;
     private String description;
@@ -19,5 +19,6 @@ public class PlaceToVisitDto {
     private String currency;
     private String source;
     private Boolean isFavorite;
+
 }
 

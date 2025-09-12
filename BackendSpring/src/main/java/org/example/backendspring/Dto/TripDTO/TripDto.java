@@ -18,6 +18,6 @@ public class TripDto {
 
     private List<FlightDto> flights;
     private List<HotelDto> hotels;
-    private List<PlaceToVisitDto> placesToVisit;
+    private List<PlaceCartDto> placesToVisit;
 }
 

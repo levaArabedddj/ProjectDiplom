@@ -8,7 +8,7 @@ import lombok.*;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class PlaceToVisit {
+public class PlaceCart {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

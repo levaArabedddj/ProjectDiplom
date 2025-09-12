@@ -88,6 +88,26 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (adminChatIds.contains(chatId)) {
             if (handleAdminCommands(chatId, text)) return; // команди авторізованого адміна
         }
+        if (text.equalsIgnoreCase("/help")) {
+            String helpText = """
+            📖 Доступные команды:
+
+            🔑 Авторизация:
+            /login – авторизация по email, телефону и имени.
+
+            👤 Управление аккаунтом:
+            /editemail <новый email> – обновить email.
+            /editphone <новый телефон> – обновить телефон.
+            /editpassword – сменить пароль (по секретному слову).
+            /resetpassword – сброс пароля через email.
+
+            📝 Отзывы:
+            /feedback <текст> – отправить отзыв.
+
+            """;
+            sendMessage(chatId, helpText);
+            return;
+        }
 
         if (text.equalsIgnoreCase("/login")) {
             sendMessage(chatId, "✉️ Введите ваш email:");
@@ -117,7 +137,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             String email = tempEmails.get(chatId);
             String phone = tempPhones.get(chatId);
             String name = tempNames.get(chatId);
-
+ // поменять тут имя на никнейм
             Optional<Users> usersOptional = usersRepository.findByGmailAndPhoneAndName(email, phone, name);
 
             if (usersOptional.isPresent()) {
@@ -335,6 +355,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
             return true;
         }
+
 
         if (text.equalsIgnoreCase("/admin")) {
             waitingForPassword.put(chatId, true);
