@@ -89,7 +89,7 @@ public class TripsService {
                 .build();
     }
 
-
+    // изменить логику что бы юзер автоматически получал интересные места а не вводил имя города
     public ResponseEntity<String> getPlaces(String city, String authHeader) {
         try {
             String token = authHeader.replace("Bearer ", "");
@@ -97,7 +97,7 @@ public class TripsService {
             headers.set("Authorization", "Bearer " + token);
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            // Получаем координаты
+
             String locUrl = BASE_URL + "/v1/reference-data/locations?keyword=" + city + "&subType=CITY";
             ResponseEntity<String> locResponse = restTemplate.exchange(locUrl, HttpMethod.GET, entity, String.class);
             JsonNode root = mapper.readTree(locResponse.getBody());
@@ -105,7 +105,7 @@ public class TripsService {
             double lat = data.get("geoCode").get("latitude").asDouble();
             double lon = data.get("geoCode").get("longitude").asDouble();
 
-            // Используем activities
+
             String activitiesUrl = BASE_URL + "/v1/shopping/activities?latitude=" + lat + "&longitude=" + lon + "&radius=5";
             var actResponse = restTemplate.exchange(activitiesUrl, HttpMethod.GET, entity, String.class);
 
@@ -117,7 +117,7 @@ public class TripsService {
         return null;
     }
 
-
+    // сохранение места которое понравилось юзеру с єтих мест
     public PlaceToVisitDto savePlaceToTrip(Long tripId, PlaceToVisitDto dto) {
         Trip trip = tripsRepo.findById(tripId)
                 .orElseThrow(() -> new RuntimeException("Trip not found: " + tripId));
@@ -137,7 +137,6 @@ public class TripsService {
 
         place = placeVisitRepo.save(place);
 
-        // возвращаем DTO
         return PlaceToVisitDto.builder()
                 .amadeusId(place.getAmadeusId())
                 .name(place.getName())
