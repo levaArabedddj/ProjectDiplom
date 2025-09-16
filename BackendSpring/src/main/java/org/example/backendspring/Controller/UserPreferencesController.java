@@ -4,9 +4,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.backendspring.Configuration.MyUserDetails;
+import org.example.backendspring.Dto.CompareRequest;
 import org.example.backendspring.Dto.FavoritePlaceDto;
 import org.example.backendspring.Dto.PlaceDetailsDto;
 import org.example.backendspring.Dto.UserPreferencesRequest;
+import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Service.MailService;
 import org.example.backendspring.Service.RecommendationService;
 import org.example.backendspring.Service.UserPreferencesService;
@@ -37,14 +39,16 @@ public class UserPreferencesController {
     @Autowired
     public MailService mailService;
 
+    public ObjectMapper mapper = new ObjectMapper();
+
     @PostMapping
     public String savePreferences(@RequestBody UserPreferencesRequest request,
                                   @AuthenticationPrincipal MyUserDetails currentUser)
             throws JsonProcessingException {
-        // Сохраняем предпочтения
-        userPreferencesService.saveUserPreferences(request);
-
         Long userId = currentUser.getUser_id();
+        // Сохраняем предпочтения
+        userPreferencesService.saveUserPreferences(request,userId);
+
 
         // Преобразуем DTO в JSON
         String userJson = new ObjectMapper().writeValueAsString(request);
@@ -83,6 +87,14 @@ public class UserPreferencesController {
         return openAIService.getPlaceDetails(placeId, currentUser.getUser_id());
     }
 
+
+    @PostMapping("/compare")
+    public JsonNode comparePlaces(@RequestBody CompareRequest request,
+                                  @AuthenticationPrincipal MyUserDetails currentUser)
+            throws JsonProcessingException {
+        Long userId = currentUser.getUser_id();
+        return openAIService.comparePlaces(request.getPlace_one(), request.getPlace_two(),userId);
+    }
 
 
 }

@@ -2,7 +2,9 @@ package org.example.backendspring.Entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -15,7 +17,6 @@ public class UserPreferences {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // связь с юзером
     @Column(nullable = false)
     private String username;
 
@@ -27,7 +28,7 @@ public class UserPreferences {
     private String travelCompanion;
     private String interests;
 
-    // История путешествий (ключ = место, значение = рейтинг)
+    // История путешествий
     @ElementCollection
     @CollectionTable(name = "visited_places", joinColumns = @JoinColumn(name = "preferences_id"))
     @MapKeyColumn(name = "place_name")
@@ -40,9 +41,13 @@ public class UserPreferences {
     @MapKeyColumn(name = "place_name")
     @Column(name = "rating")
     private Map<String, Integer> dislikedPlaces;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private Users user;
 
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
 }

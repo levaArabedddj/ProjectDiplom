@@ -1,18 +1,26 @@
 package org.example.backendspring.ServiceApi;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 
+import lombok.extern.slf4j.Slf4j;
 import org.example.backendspring.Dto.PlaceDetailsDto;
+import org.example.backendspring.Dto.UserPreferencesRequest;
 import org.example.backendspring.Entity.RecommendedPlace;
+import org.example.backendspring.Entity.UserPreferences;
+import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Repository.RecommendedPlaceRepo;
+import org.example.backendspring.Repository.UserPreferencesRepository;
+import org.example.backendspring.Repository.UsersRepo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -26,6 +34,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.http.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+@Slf4j
 @Service
 
 @RequiredArgsConstructor
@@ -43,6 +52,11 @@ public class OpenAIService {
 
     @Autowired
     private RecommendedPlaceRepo placeRepo;
+    @Autowired
+    private UserPreferencesRepository userPrefsRepo;
+
+    @Autowired
+    private UsersRepo usersRepo;
 
     public JsonNode getRecommendations(String userJson, String userName) {
         try {
@@ -234,6 +248,83 @@ public class OpenAIService {
     }
 
 
+    public JsonNode comparePlaces(String place1, String place2,Long userId) throws JsonProcessingException {
+
+        Users user = usersRepo.findById(userId).
+                orElseThrow(()-> new UsernameNotFoundException("user not found"));
+
+        if(!(user== null)){
+            log.info(String.valueOf(user));
+        }
+        UserPreferences userPreferences = userPrefsRepo.findFirstByUserOrderByIdDesc(user).
+                orElseThrow(()->new UsernameNotFoundException("user not found"));
+
+            UserPreferencesRequest dto = toDto(userPreferences);
+            String userJson = objectMapper.writeValueAsString(dto);
+
+
+        try {
+            String prompt = """
+        Ты — эксперт по путешествиям.
+        Вот данные о пользователе в JSON:
+        %s
+
+        Пользователь хочет сравнить два места: "%s" и "%s".
+        Твоя задача:
+        1. Проанализировать предпочтения и интересы пользователя.
+        2. Сравнить эти два города по:
+           - плюсам
+           - минусам
+           - соответствию интересам пользователя
+           - бюджету
+           - безопасности
+           - транспорту
+           - климату
+        3. Дай оценку (от 0 до 10) насколько каждое место подходит.
+        4. В конце напиши итоговую рекомендацию куда именно ехать, основываясь на интересах юзера.
+
+        Формат ответа — строго JSON без лишнего текста:
+        {
+          "place1": {
+            "name": "...",
+            "pros": ["...", "..."],
+            "cons": ["...", "..."],
+            "suitability": "...",
+            "recommendationScore": ...
+          },
+          "place2": {
+            "name": "...",
+            "pros": ["...", "..."],
+            "cons": ["...", "..."],
+            "suitability": "...",
+            "recommendationScore": ...
+          },
+          "final_recommendation": "..."
+        }
+        """.formatted(userJson, place1, place2);
+
+            return askGpt(prompt);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка при сравнении мест через GPT", e);
+        }
+    }
+
+
+    private UserPreferencesRequest toDto(UserPreferences p) {
+        UserPreferencesRequest d = new UserPreferencesRequest();
+        d.setUsername(p.getUsername());
+        d.setCountry(p.getCountry());
+        d.setCity(p.getCity());
+        d.setFavoritePlaces(p.getFavoritePlaces());
+        d.setPreferredTripDuration(p.getPreferredTripDuration());
+        d.setTransportPreference(p.getTransportPreference());
+        d.setTravelCompanion(p.getTravelCompanion());
+        d.setInterests(p.getInterests());
+        d.setVisitedPlaces(p.getVisitedPlaces() == null ? Map.of() : p.getVisitedPlaces());
+        d.setDislikedPlaces(p.getDislikedPlaces() == null ? Map.of() : p.getDislikedPlaces());
+        return d;
+    }
 }
 
 
