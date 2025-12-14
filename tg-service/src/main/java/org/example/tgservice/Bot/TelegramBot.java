@@ -74,6 +74,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.mailService = mailService;
     }
 
+    // Добавить администратора тг-бота который будет просматривать жалобы,
+    // и сообщения и возможность пересылку этих сообщения юзерам
+
     @Override
     public void onUpdateReceived(Update update) {
         if (!update.hasMessage() || !update.getMessage().hasText()) return;

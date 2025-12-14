@@ -20,6 +20,9 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 @Service
 public class TripsService {
 
@@ -51,11 +54,27 @@ public class TripsService {
         trip1.setCityName(trip.getCityName());
         trip1.setStartDate(trip.getStartDate());
         trip1.setEndDate(trip.getEndDate());
-        trip1.setBudget(trip.getBudget());
         trip1.setStatus(TripStatus.PLANNED);
         trip1.setUser(users);
+        trip1.setBalance(trip.getBalance());
+        trip1.setCurrency(trip.getCurrency());
         tripsRepo.save(trip1);
     }
+
+
+//    public void updateBalanceTrip(Long tripId, TripDto trip, Long userId) {
+//
+//       //List<Trip> trip1 =  tripsRepo.findByUserUser_id(userId);
+//
+//       if(trip1.isEmpty()){
+//           new Exception("Trip not found");
+//       }
+//
+//       Trip trip2 = new Trip();
+//       trip2.setBalance(trip.getBalance());
+//       trip2.setCurrency(trip.getCurrency());
+//       tripsRepo.save(trip2);
+//    }
 
     public TripDto getTripById(Long userId,Long tripId) {
 
@@ -76,7 +95,7 @@ public class TripsService {
                 .cityName(trip.getCityName())
                 .startDate(trip.getStartDate())
                 .endDate(trip.getEndDate())
-                .budget(trip.getBudget())
+                .balance(trip.getBalance())
                 .flights(trip.getFlights().stream()
                         .map(f -> new FlightDto(f.getId(), f.getFromAirport(), f.getToAirport(), f.getDepartureTime(),f.getArrivalTime(),f.getAirline(),f.getFlightNumber(),f.getPrice(),f.getCurrency(),f.getBookingUrl()))
                         .toList())

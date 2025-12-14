@@ -1,6 +1,9 @@
 package org.example.backendspring.Dto.TripDTO;
 
 import lombok.*;
+import org.example.backendspring.Enun.CurrencyId;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -13,8 +16,8 @@ public class TripDto {
     private String cityName;
     private LocalDate startDate;
     private LocalDate endDate;
-    private Double budget;
-    private String currency;
+    private BigDecimal balance;
+    private CurrencyId currency;
 
     private List<FlightDto> flights;
     private List<HotelDto> hotels;

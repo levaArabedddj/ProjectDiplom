@@ -95,5 +95,13 @@ public class TripsController {
         return ResponseEntity.ok(saved);
     }
 
-
+//    @PatchMapping("/{tripId}/updateBalance")
+//    public ResponseEntity<String> updateBalance(@RequestBody TripDto tripDto,
+//                                                @AuthenticationPrincipal MyUserDetails user,
+//                                                @PathVariable Long tripId) {
+//
+//        Long userId = user.getUser_id();
+//        tripsService.updateBalanceTrip(tripId, tripDto, userId);
+//        return ResponseEntity.ok("Передано дані");
+//    }
 }

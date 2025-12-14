@@ -4,22 +4,22 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.backendspring.Configuration.MyUserDetails;
-import org.example.backendspring.Dto.CompareRequest;
-import org.example.backendspring.Dto.FavoritePlaceDto;
-import org.example.backendspring.Dto.PlaceDetailsDto;
-import org.example.backendspring.Dto.UserPreferencesRequest;
+import org.example.backendspring.Dto.*;
 import org.example.backendspring.Entity.Users;
+import org.example.backendspring.Proba.MlRecommendationService;
 import org.example.backendspring.Service.MailService;
 import org.example.backendspring.Service.RecommendationService;
 import org.example.backendspring.Service.UserPreferencesService;
 import org.example.backendspring.ServiceApi.OpenAIService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -39,6 +39,8 @@ public class UserPreferencesController {
     @Autowired
     public MailService mailService;
 
+    @Autowired
+    MlRecommendationService mlRecommendationService;
     public ObjectMapper mapper = new ObjectMapper();
 
     @PostMapping
@@ -94,6 +96,31 @@ public class UserPreferencesController {
             throws JsonProcessingException {
         Long userId = currentUser.getUser_id();
         return openAIService.comparePlaces(request.getPlace_one(), request.getPlace_two(),userId);
+    }
+
+    @PostMapping("/ml")
+    public ResponseEntity<?> sendToMl(@RequestBody UserPreferencesRequest request,
+                                      @AuthenticationPrincipal MyUserDetails currentUser) {
+
+       // Long userId = currentUser.getUser_id();
+        //userPreferencesService.saveUserPreferences(request, userId);
+
+        // Получаем результат от Python ML API
+        JsonNode mlResponse = mlRecommendationService.getMlRecommendations(request);
+        if (mlResponse == null) {
+            return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body("ML-сервис недоступен или вернул ошибку");
+        }
+       // recommendationService.saveGptRecommendations(userId, mlResponse);
+
+        return ResponseEntity.ok(mlResponse);
+    }
+
+
+    @GetMapping("/me")
+    public ResponseEntity<UserDto> getCurrentProfileUser(Authentication authentication) throws UserPrincipalNotFoundException {
+       UserDto userDto =  userPreferencesService.getCurrentUser(authentication);
+        return ResponseEntity.ok(userDto);
     }
 
 

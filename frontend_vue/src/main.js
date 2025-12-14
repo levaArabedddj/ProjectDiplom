@@ -1,5 +1,15 @@
 import { createApp } from 'vue'
-import './style.css'
 import App from './App.vue'
+import router from './router'
+import { createPinia } from 'pinia'
+import './style.css'
 
-createApp(App).mount('#app')
+import { plugin as FormKitPlugin, defaultConfig } from "@formkit/vue";
+
+const app = createApp(App);
+
+app.use(router);
+app.use(createPinia());
+app.use(FormKitPlugin, defaultConfig);
+
+app.mount("#app");

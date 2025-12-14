@@ -37,7 +37,6 @@ public class SecurityController {
     private JwtCore jwtCore;
 
 
-
     @Autowired
     public void setUsersRepo(UsersRepo usersRepo) {
         this.usersRepo = usersRepo;
@@ -132,6 +131,8 @@ public class SecurityController {
         // fallback — просто имя из токена
         return ResponseEntity.ok(Map.of("username", authentication.getName()));
     }
+
+
 
 
 

@@ -1,6 +1,8 @@
 package org.example.backendspring.Dto;
 
 import lombok.Data;
+import org.example.backendspring.Enun.AccommodationType;
+
 import java.util.Map;
 
 @Data
@@ -31,7 +33,9 @@ public class UserPreferencesRequest {
     // Предпочтения по активностям
     private String interests;       // спорт, дискотеки, бары, музеи, пляжный отдых
 
-
+    private AccommodationType accommodationType;
+    private Integer budget;
+    private int traver_frequency;
 
 }
 

@@ -5,11 +5,14 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.example.backendspring.Enun.CurrencyId;
 import org.example.backendspring.Enun.TripStatus;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Builder
@@ -24,8 +27,8 @@ public class Trip {
     private String cityName;
     private LocalDate startDate;
     private LocalDate endDate;
-    private Double budget;
-
+    private BigDecimal balance;
+    private CurrencyId currency;
     @Enumerated(EnumType.STRING)
     private TripStatus status; // PLANNED, IN_PROGRESS, DONE
 
@@ -42,5 +45,7 @@ public class Trip {
 
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
     private List<PlaceCart> placesToVisit = new ArrayList<>();
+
+
 }
 
