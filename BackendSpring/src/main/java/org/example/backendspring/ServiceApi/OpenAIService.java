@@ -282,8 +282,7 @@ public class OpenAIService {
            - климату
         3. Дай оценку (от 0 до 10) насколько каждое место подходит.
         4. В конце напиши итоговую рекомендацию куда именно ехать, основываясь на интересах юзера.
-
-        Формат ответа — строго JSON без лишнего текста:
+        You MUST return ONLY valid JSON.No text, no markdown, no explanations:
         {
           "place1": {
             "name": "...",

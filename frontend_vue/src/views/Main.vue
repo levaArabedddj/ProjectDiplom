@@ -4,11 +4,10 @@
       <h1 class="title">Головна сторінка</h1>
 
       <div class="grid">
-        <div class="tile">
+        <div class="tile" @click="$router.push('/suggestions')">
           <span>🤖</span>
           <p>Інтелектуальні пропозиції</p>
         </div>
-
         <div class="tile">
           🔍
           <p>Пошук рейсів / готелів</p>
@@ -24,7 +23,7 @@
           <p>Картки подорожей</p>
         </div>
 
-        <div class="tile">
+        <div class="tile" @click="goToCompare">
           <span>📊</span>
           <p>Порівняння регіонів</p>
         </div>
@@ -37,6 +36,16 @@
     </div>
   </div>
 </template>
+
+<script setup>
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+function goToCompare() {
+  router.push('/compare')
+}
+</script>
 
 <style scoped>
 .main-page {

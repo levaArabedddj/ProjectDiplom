@@ -7,6 +7,8 @@ import Register from '@/views/Register.vue'
 import Main from '@/views/Main.vue'
 import Home from '@/views/Home.vue'
 import Questionnaire from "@/views/Questionnaire.vue";
+import Compare from "@/views/Compare.vue"
+import SmartSuggestions from '@/views/SmartSuggestions.vue'
 
 
 const routes = [
@@ -44,6 +46,18 @@ const routes = [
         component: Questionnaire,
         meta: { requiresAuth: true }
     },
+    {
+        path: '/compare',
+        component: Compare,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/suggestions',
+            name: 'SmartSuggestions',
+        component: SmartSuggestions,
+        meta: { requiresAuth: true }
+    }
+
 ]
 
 const router = createRouter({
