@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.backendspring.Configuration.MyUserDetails;
 import org.example.backendspring.Dto.*;
+import org.example.backendspring.Entity.UserAIPreference;
 import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Proba.MlRecommendationService;
 import org.example.backendspring.Service.MailService;
@@ -123,6 +124,34 @@ public class UserPreferencesController {
         return ResponseEntity.ok(userDto);
     }
 
+    @PostMapping("/preference")
+    public AIPreferenceResponse addPreference(
+            @RequestBody AIPreferenceRequest request,
+            @AuthenticationPrincipal MyUserDetails currentUser
+            ){
+        Long userId = currentUser.getUser_id();
+        return userPreferencesService.addUserPreferences(request,userId);
+    }
+
+    @GetMapping("/preference")
+    public List<AIPreferenceResponse> getPreference(
+            @AuthenticationPrincipal MyUserDetails currentUser
+    ) {
+        return userPreferencesService.getUserPreference(currentUser.getUser_id());
+    }
+
+    @PutMapping("/preferences/{id}/toggle")
+    public void toggle(@PathVariable Long id,
+                       @AuthenticationPrincipal MyUserDetails currentUser) {
+        userPreferencesService.UpdateToggle(id);
+    }
+
+    @PostMapping("/ai/recommendations")
+    public JsonNode getAIRecommendations(
+            @AuthenticationPrincipal MyUserDetails userDetails
+    ) {
+        return openAIService.getAIRecommendationsForUser(userDetails.getUser_id());
+    }
 
 }
 

@@ -48,6 +48,7 @@ public class Users {
     @Column(unique = true)
     private Long telegramChatId;
 
+
     private String phone;
     private String securityWord;
 

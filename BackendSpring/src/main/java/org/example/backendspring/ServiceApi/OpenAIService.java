@@ -14,6 +14,7 @@ import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Repository.RecommendedPlaceRepo;
 import org.example.backendspring.Repository.UserPreferencesRepository;
 import org.example.backendspring.Repository.UsersRepo;
+import org.example.backendspring.Service.UserPreferencesService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
@@ -57,6 +58,8 @@ public class OpenAIService {
 
     @Autowired
     private UsersRepo usersRepo;
+    @Autowired
+    private UserPreferencesService userPreferencesService;
 
     public JsonNode getRecommendations(String userJson, String userName) {
         try {
@@ -212,7 +215,7 @@ public class OpenAIService {
         return map;
     }
 
-    public JsonNode askGpt(String prompt) {
+    private JsonNode askGpt(String prompt) {
         Long startTime =System.currentTimeMillis();
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -307,6 +310,39 @@ public class OpenAIService {
         } catch (Exception e) {
             throw new RuntimeException("Ошибка при сравнении мест через GPT", e);
         }
+    }
+
+    public JsonNode getAIRecommendationsForUser(Long userId) {
+
+        String userJson = userPreferencesService.buildProfileJson(userId);
+
+        String prompt = """
+    Ты — интеллектуальный помощник по путешествиям.
+
+    Вот профиль пользователя (JSON):
+    %s
+
+    Задача:
+    1. Проанализировать желания пользователя и его историю
+    2. Учитывать dislikedPlaces — НЕ предлагать их
+    3. Учитывать транспорт, бюджет, стиль путешествий
+    4. Предложить 5 конкретных мест (не только города, но и локации)
+    5. Добавить короткий комментарий ПОЧЕМУ это подходит
+
+    Ответ СТРОГО в JSON:
+    {
+      "summary": "краткое резюме предпочтений",
+      "recommendations": [
+        {
+          "place": "…",
+          "country": "…",
+          "reason": "…"
+        }
+      ]
+    }
+    """.formatted(userJson);
+
+        return askGpt(prompt);
     }
 
 

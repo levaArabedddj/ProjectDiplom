@@ -1,13 +1,15 @@
 package org.example.backendspring.Service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import org.example.backendspring.Configuration.MyUserDetails;
-import org.example.backendspring.Dto.FavoritePlaceDto;
-import org.example.backendspring.Dto.UserDto;
-import org.example.backendspring.Dto.UserPreferencesRequest;
+import org.example.backendspring.Dto.*;
+import org.example.backendspring.Entity.UserAIPreference;
 import org.example.backendspring.Entity.UserPreferences;
 import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Repository.RecommendedPlaceRepo;
+import org.example.backendspring.Repository.UserAIPreferenceRepository;
 import org.example.backendspring.Repository.UserPreferencesRepository;
 import org.example.backendspring.Repository.UsersRepo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,8 @@ import org.springframework.stereotype.Service;
 
 import java.nio.file.attribute.UserPrincipalNotFoundException;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class UserPreferencesService {
@@ -24,14 +28,21 @@ public class UserPreferencesService {
     public final RecommendedPlaceRepo placeRepo;
     public final UsersRepo usersRepo;
     public final ServiceConvertDto serviceConvertDto;
+    private final UserAIPreferenceRepository userAIPreferenceRepository;
+    private final ObjectMapper objectMapper;
 
     @Autowired
-    public UserPreferencesService(UserPreferencesRepository userPreferencesRepository, RecommendedPlaceRepo placeRepo, UsersRepo usersRepo, ServiceConvertDto serviceConvertDto) {
+    public UserPreferencesService(UserPreferencesRepository userPreferencesRepository, RecommendedPlaceRepo placeRepo, UsersRepo usersRepo, ServiceConvertDto serviceConvertDto,
+                                  UserAIPreferenceRepository userAIPreferenceRepository, ObjectMapper objectMapper) {
         this.userPreferencesRepository = userPreferencesRepository;
         this.placeRepo = placeRepo;
         this.usersRepo = usersRepo;
         this.serviceConvertDto = serviceConvertDto;
+        this.userAIPreferenceRepository = userAIPreferenceRepository;
+        this.objectMapper = objectMapper;
     }
+
+
 
     public void saveUserPreferences(UserPreferencesRequest request,Long userId) {
         Users users = usersRepo.findById(userId).
@@ -81,5 +92,71 @@ public class UserPreferencesService {
 
         return serviceConvertDto.convertDtoUser(user);
     }
+
+    public AIPreferenceResponse addUserPreferences(AIPreferenceRequest request, Long userId) {
+        Users users = usersRepo.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        UserAIPreference userAIPreference = new UserAIPreference();
+        userAIPreference.setUser(users);
+        userAIPreference.setType(request.getType());
+        userAIPreference.setValue(request.getValue());
+        userAIPreferenceRepository.save(userAIPreference);
+        return new
+                AIPreferenceResponse(userAIPreference.getId(),
+                userAIPreference.getType(),userAIPreference.getValue(),
+                userAIPreference.isActive());
+    }
+
+
+    public List<AIPreferenceResponse> getUserPreference(Long userId) {
+
+        List<UserAIPreference> list = userAIPreferenceRepository.findAllByUserId(userId);
+
+        return list.stream().map(p -> new AIPreferenceResponse(
+                        p.getId(),
+                        p.getType(),
+                        p.getValue(),
+                        p.isActive()
+                )).
+                toList();
+    }
+
+
+    public void UpdateToggle(Long id) {
+        UserAIPreference ai = userAIPreferenceRepository.findById(id).orElse(null);
+        ai.setActive(!ai.isActive());
+        userAIPreferenceRepository.save(ai);
+    }
+
+    public String buildProfileJson(Long userId) {
+        Users users  = usersRepo.findById(userId).orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        UserPreferences upf = userPreferencesRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("UserPreferences not found"));
+
+        List<UserAIPreference> ai = userAIPreferenceRepository.findActiveByUserId(userId);
+        UserAIProfileDto dto = new UserAIProfileDto();
+        dto.setUsername(upf.getUsername());
+        dto.setCountry(upf.getCountry());
+        dto.setCity(upf.getCity());
+        dto.setTransportPreference(upf.getTransportPreference());
+        dto.setTravelCompanion(upf.getTravelCompanion());
+        dto.setInterests(upf.getInterests());
+        dto.setPreferredTripDuration(upf.getPreferredTripDuration());
+        dto.setVisitedPlaces(upf.getVisitedPlaces());
+        dto.setDislikedPlaces(upf.getDislikedPlaces());
+
+        Map<String,List<String>> grouped = ai.stream()
+                .collect(Collectors.groupingBy(
+                        p-> p.getType().name(),
+                        Collectors.mapping(UserAIPreference::getValue, Collectors.toList())
+                ));
+        dto.setAiPreferences(grouped);
+
+        try {
+            return objectMapper.writeValueAsString(dto);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 
 }
