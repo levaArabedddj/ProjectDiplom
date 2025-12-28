@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface UserPreferencesRepository extends JpaRepository<UserPreferences, Long> {
 
     Optional<UserPreferences> findFirstByUserOrderByIdDesc(Users user);
+    Optional<UserPreferences> findByUser(Users user);
+
 }

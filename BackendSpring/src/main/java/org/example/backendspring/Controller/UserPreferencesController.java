@@ -5,9 +5,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.backendspring.Configuration.MyUserDetails;
 import org.example.backendspring.Dto.*;
-import org.example.backendspring.Entity.UserAIPreference;
+import org.example.backendspring.Entity.FavoritePlace;
 import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Proba.MlRecommendationService;
+import org.example.backendspring.Repository.FavoriteRepo;
+import org.example.backendspring.Repository.UsersRepo;
 import org.example.backendspring.Service.MailService;
 import org.example.backendspring.Service.RecommendationService;
 import org.example.backendspring.Service.UserPreferencesService;
@@ -17,12 +19,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.nio.file.attribute.UserPrincipalNotFoundException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 
@@ -41,7 +45,11 @@ public class UserPreferencesController {
     public MailService mailService;
 
     @Autowired
+    public FavoriteRepo favoriteRepo;
+    @Autowired
     MlRecommendationService mlRecommendationService;
+    @Autowired
+    UsersRepo usersRepo;
     public ObjectMapper mapper = new ObjectMapper();
 
     @PostMapping
@@ -80,13 +88,35 @@ public class UserPreferencesController {
 
     @GetMapping("/favorites")
     public List<FavoritePlaceDto> getFavorites(@AuthenticationPrincipal MyUserDetails currentUser) {
-        Long userId = currentUser.getUser_id();
-        return userPreferencesService.getFavoritePlaces(userId);
+        Optional<Users> users = usersRepo.findById(currentUser.getUser_id());
+        return userPreferencesService.getFavoritesPlaces(users.orElse(null));
+    }
+
+    @PostMapping("/favoriteRegion")
+    public void addFavoriteRegionInFavoritePlaces(@AuthenticationPrincipal MyUserDetails currentUser,
+            @RequestBody FavoritePlaceDto dto){
+        Users user = usersRepo.findById(currentUser.getUser_id())
+                .orElseThrow(() -> new UsernameNotFoundException("user not found"));
+
+        // защита от дублей
+        if (favoriteRepo.existsByUserAndNameAndCountry(user, dto.getName(), dto.getCountry())) {
+            return;
+        }
+
+        FavoritePlace favorite = FavoritePlace.builder()
+                .user(user)
+                .name(dto.getName())
+                .country(dto.getCountry())
+                .createdAt(LocalDateTime.now())
+                .source("GPT")
+                .build();
+
+        favoriteRepo.save(favorite);
     }
 
     @GetMapping("/places/{placeId}/details")
     public PlaceDetailsDto getPlaceDetails(@PathVariable Long placeId,
-                                           @AuthenticationPrincipal MyUserDetails currentUser) {
+                                           @AuthenticationPrincipal MyUserDetails currentUser) throws Exception {
         return openAIService.getPlaceDetails(placeId, currentUser.getUser_id());
     }
 
@@ -152,6 +182,9 @@ public class UserPreferencesController {
     ) {
         return openAIService.getAIRecommendationsForUser(userDetails.getUser_id());
     }
+
+
+
 
 }
 

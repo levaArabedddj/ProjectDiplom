@@ -8,9 +8,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.backendspring.Dto.PlaceDetailsDto;
 import org.example.backendspring.Dto.UserPreferencesRequest;
+import org.example.backendspring.Entity.FavoritePlace;
 import org.example.backendspring.Entity.RecommendedPlace;
 import org.example.backendspring.Entity.UserPreferences;
 import org.example.backendspring.Entity.Users;
+import org.example.backendspring.Repository.FavoriteRepo;
 import org.example.backendspring.Repository.RecommendedPlaceRepo;
 import org.example.backendspring.Repository.UserPreferencesRepository;
 import org.example.backendspring.Repository.UsersRepo;
@@ -60,6 +62,8 @@ public class OpenAIService {
     private UsersRepo usersRepo;
     @Autowired
     private UserPreferencesService userPreferencesService;
+    @Autowired
+    private FavoriteRepo favoriteRepo;
 
     public JsonNode getRecommendations(String userJson, String userName) {
         try {
@@ -128,12 +132,10 @@ public class OpenAIService {
     }
 
 
-    public PlaceDetailsDto getPlaceDetails(Long placeId, Long userId) {
+    public PlaceDetailsDto getPlaceDetails(Long placeId, Long userId) throws Exception {
 
         Long startTime =System.currentTimeMillis();
-        RecommendedPlace place = placeRepo.findById(placeId)
-                .filter(p -> p.getNotification().getUserId().equals(userId))
-                .orElseThrow(() -> new RuntimeException("Place not found or access denied"));
+        FavoritePlace place = favoriteRepo.findById(placeId).orElseThrow(()-> new Exception("Data not found"));
         Long endTime =System.currentTimeMillis();
         System.out.println(endTime - startTime+ " - на бд");
 

@@ -1,14 +1,16 @@
 package org.example.backendspring.Dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Data
-@AllArgsConstructor
 @NoArgsConstructor
+@Setter
+@Getter
+@AllArgsConstructor
 public class FavoritePlaceDto {
     private Long id;
     private String name;
+    private String country;
+
 }
 

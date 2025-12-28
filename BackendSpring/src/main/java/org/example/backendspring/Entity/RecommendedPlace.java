@@ -16,6 +16,7 @@ public class RecommendedPlace {
     private boolean liked = false;
     private boolean disliked = false;
 
+
     @ManyToOne
     @JoinColumn(name = "notification_id")
     private Notification notification;

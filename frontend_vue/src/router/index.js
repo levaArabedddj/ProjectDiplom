@@ -9,6 +9,7 @@ import Home from '@/views/Home.vue'
 import Questionnaire from "@/views/Questionnaire.vue";
 import Compare from "@/views/Compare.vue"
 import SmartSuggestions from '@/views/SmartSuggestions.vue'
+import SavedData from '@/views/SavedData.vue'
 
 
 const routes = [
@@ -55,6 +56,12 @@ const routes = [
         path: '/suggestions',
             name: 'SmartSuggestions',
         component: SmartSuggestions,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/saved',
+        name: 'Saved',
+        component: SavedData,
         meta: { requiresAuth: true }
     }
 

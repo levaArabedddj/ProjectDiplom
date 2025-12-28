@@ -103,8 +103,23 @@
           <div v-for="(r, idx) in recommendations" :key="idx" class="result-card">
             <h4>{{ r.place }} <small v-if="r.country">— {{ r.country }}</small></h4>
             <p class="reason">{{ r.reason }}</p>
+
             <div class="result-actions">
-              <button class="btn small" @click="moreDetailsPlaceholder(r)">Більше деталей</button>
+              <!-- More details (placeholder) -->
+              <button class="btn small" @click="moreDetailsPlaceholder(r)">
+                Більше деталей
+              </button>
+
+              <!-- Add to favorites -->
+              <button
+                  class="btn small primary"
+                  :disabled="r.addingFavorite || r.favorited"
+                  @click="addToFavorites(r, idx)"
+              >
+                <span v-if="r.addingFavorite">Додаємо...</span>
+                <span v-else-if="r.favorited">Додано</span>
+                <span v-else>Додати в улюблені</span>
+              </button>
             </div>
           </div>
         </div>
@@ -265,6 +280,35 @@ async function requestRecommendations() {
     alert('Ошибка при получении рекомендаций. ' + (serverMsg || 'Попробуйте позже'))
   } finally {
     loadingRecommendations.value = false
+  }
+}
+
+async function addToFavorites(r, idx) {
+  // Защита: если уже добавлено — ничего не делаем
+  if (r.favorited || r.addingFavorite) return
+
+  // Подстраиваем данные, которые бэк ожидает (FavoritePlaceDto)
+  const payload = {
+    name: r.place || '',
+    country: r.country || ''
+  }
+
+  // помечаем локально как в процессе
+  r.addingFavorite = true
+  try {
+    await api.post('/api/preferences/favoriteRegion', payload)
+
+    // успешно — отметим локально как добавленное
+    r.favorited = true
+    // можно показать сообщение
+    alert(`"${r.place}" додано в фаворити`)
+  } catch (err) {
+    console.error('addToFavorites error', err)
+    // если бэк возвращает сообщение — покажем
+    const msg = err?.response?.data?.message || 'Помилка при додаванні в улюблені'
+    alert(msg)
+  } finally {
+    r.addingFavorite = false
   }
 }
 

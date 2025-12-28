@@ -13,7 +13,7 @@
           <p>Пошук рейсів / готелів</p>
         </div>
 
-        <div class="tile">
+        <div class="tile" @click="$router.push('/saved')">
           <span>💾</span>
           <p>Збережені дані</p>
         </div>
@@ -45,6 +45,8 @@ const router = useRouter()
 function goToCompare() {
   router.push('/compare')
 }
+
+
 </script>
 
 <style scoped>
