@@ -1,86 +1,50 @@
 <template>
-  <div class="auth-container">
-    <h2>Регистрация</h2>
+  <div class="auth-page">
+    <div class="auth-card">
+      <span class="emoji">🧳</span>
 
-    <form @submit.prevent="handleRegister">
+      <h2 class="title">Создай аккаунт</h2>
+      <p class="subtitle">
+        Один шаг — и мы начнём помогать тебе планировать путешествия
+      </p>
 
-      <!-- Username -->
-      <FormKit
-          type="text"
-          label="Username"
-          v-model="userName"
-          validation="required"
-      />
+      <form @submit.prevent="handleRegister" class="form">
+        <FormKit type="text" label="Username" v-model="userName" validation="required" />
+        <FormKit type="text" label="Имя" v-model="name" validation="required" />
+        <FormKit type="text" label="Фамилия" v-model="surName" validation="required" />
+        <FormKit type="email" label="Email" v-model="gmail" validation="required|email" />
+        <FormKit type="password" label="Пароль" v-model="password" validation="required" />
 
-      <!-- Name -->
-      <FormKit
-          type="text"
-          label="Имя"
-          v-model="name"
-          validation="required"
-      />
-
-      <!-- Surname -->
-      <FormKit
-          type="text"
-          label="Фамилия"
-          v-model="surName"
-          validation="required"
-      />
-
-      <!-- Email -->
-      <FormKit
-          type="email"
-          label="Email"
-          v-model="gmail"
-          validation="required|email"
-      />
-
-      <!-- Пароль -->
-      <FormKit
-          type="password"
-          label="Пароль"
-          v-model="password"
-          validation="required"
-      />
-
-      <!-- Gender -->
-      <FormKit
-          type="select"
-          label="Пол"
-          v-model="gender"
-          :options="[
+        <FormKit
+            type="select"
+            label="Пол"
+            v-model="gender"
+            :options="[
             { label: 'Мужчина', value: 'male' },
             { label: 'Женщина', value: 'female' },
             { label: 'Небинарный', value: 'non_binary' }
           ]"
-          validation="required"
-      />
+            validation="required"
+        />
 
-      <!-- Phone -->
-      <FormKit
-          type="text"
-          label="Телефон"
-          v-model="phone"
-          validation="required"
-      />
+        <FormKit type="text" label="Телефон" v-model="phone" validation="required" />
+        <FormKit type="password" label="Секретное слово" v-model="securityWord" validation="required" />
 
-      <!-- Security word -->
-      <FormKit
-          type="password"
-          label="Секретное слово"
-          v-model="securityWord"
-          validation="required"
-      />
+        <button class="btn primary" :disabled="store.loading">
+          Создать аккаунт
+        </button>
+      </form>
 
-      <button :disabled="store.loading" class="btn">
-        Зарегистрироваться
-      </button>
-    </form>
+      <p v-if="store.error" class="error">{{ store.error }}</p>
 
-    <p v-if="store.error" class="error">{{ store.error }}</p>
+      <p class="hint">
+        Уже есть аккаунт?
+        <router-link to="/login">Войти</router-link>
+      </p>
+    </div>
   </div>
 </template>
+
 
 <script setup>
 import { ref } from 'vue'
@@ -117,14 +81,114 @@ async function handleRegister() {
 </script>
 
 <style scoped>
-.auth-container {
-  max-width: 450px;
-  margin: 40px auto;
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  padding: 20px;
 }
-.error {
-  color: red;
+
+.auth-card {
+  background: rgba(20, 40, 50, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 26px;
+
+  padding: 48px 36px;
+  max-width: 460px;
+  width: 100%;
+
+  text-align: center;
+  color: #ffffff;
+
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.45);
 }
+
+.emoji {
+  font-size: 52px;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.title {
+  font-size: 2.4rem;
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.75);
+  margin-bottom: 30px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* кнопка */
 .btn {
-  margin-top: 10px;
+  margin-top: 20px;
+  padding: 14px;
+  border-radius: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.25s ease;
 }
+
+.primary {
+  background: #646cff;
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(100, 108, 255, 0.4);
+}
+
+.primary:hover:not(:disabled) {
+  background: #535bf2;
+  transform: translateY(-2px);
+}
+
+.primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  margin-top: 16px;
+  color: #ffb4b4;
+  font-size: 0.9rem;
+}
+
+.hint {
+  margin-top: 24px;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.hint a {
+  color: #8fa2ff;
+  text-decoration: none;
+}
+
+.hint a:hover {
+  text-decoration: underline;
+}
+
+/* мобильная адаптация */
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 36px 22px;
+  }
+  .title {
+    font-size: 2rem;
+  }
+}
+
 </style>

@@ -4,6 +4,11 @@
       <h1 class="title">Головна сторінка</h1>
 
       <div class="grid">
+        <div class="tile" @click="router.push('/home')">
+          <span>🏠</span>
+          <p> На головну</p>
+        </div>
+
         <div class="tile" @click="$router.push('/suggestions')">
           <span>🤖</span>
           <p>Інтелектуальні пропозиції</p>
@@ -28,17 +33,31 @@
           <p>Порівняння регіонів</p>
         </div>
 
-        <div class="tile">
+        <div class="tile" @click="openCreateTrip">
           <span>➕</span>
-          <p>Створити подорож</p>
+          <h3>Створити подорож</h3>
+          <p>Заплануйте нову поїздку</p>
         </div>
       </div>
+      <CreateTripModal
+          v-if="showCreateTrip"
+          @close="showCreateTrip = false"
+      />
+
     </div>
   </div>
 </template>
 
 <script setup>
 import { useRouter } from 'vue-router'
+import { ref } from 'vue'
+import CreateTripModal from '@/components/CreateTripModal.vue'
+
+const showCreateTrip = ref(false)
+
+function openCreateTrip() {
+  showCreateTrip.value = true
+}
 
 const router = useRouter()
 
@@ -62,7 +81,6 @@ function goToCompare() {
   font-family: "Inter", "Segoe UI", sans-serif;
 }
 
-/* Контейнер — широкий, как сайт */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -76,14 +94,12 @@ function goToCompare() {
   color: #ffffff;
 }
 
-/* СЕТКА ДЛЯ ДЕСКТОПА */
 .grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 28px;
 }
 
-/* Карточки */
 .tile {
   background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(12px);
@@ -112,14 +128,12 @@ function goToCompare() {
   font-weight: 500;
 }
 
-/* Планшеты */
 @media (max-width: 1024px) {
   .grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* Телефоны */
 @media (max-width: 640px) {
   .grid {
     grid-template-columns: 1fr;
@@ -128,6 +142,23 @@ function goToCompare() {
   .title {
     font-size: 28px;
   }
+}
+.back-button {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-5px);
 }
 
 

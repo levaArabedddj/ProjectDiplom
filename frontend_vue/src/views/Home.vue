@@ -13,7 +13,6 @@
           <div class="top-content">
             <div class="user">
               <img src="/placeholder.png" class="avatar" />
-
               <div class="user-text">
                 <h2>{{ user.name }} {{ user.surname }}</h2>
                 <p>@{{ user.userName }}</p>
@@ -34,15 +33,18 @@
         <div class="container">
           <h3>Вхідні повідомлення</h3>
 
-          <!-- Иконка уведомления -->
-          <div class="notification-icon" v-if="notification" @click="toggleNotification">
-            📩 Нове повідомлення
+          <div
+              v-if="notification"
+              class="notification-icon"
+              @click="toggleNotification"
+          >
+            📩 Вхідні повідомлення
           </div>
 
-          <!-- Сообщение раскрывается/сворачивается -->
           <div v-if="notification && showNotification" class="mail-card">
             <h4>{{ notification.title }}</h4>
             <p>{{ notification.message }}</p>
+
             <ul>
               <li v-for="place in notification.places" :key="place.id">
                 {{ place.name }}
@@ -52,9 +54,8 @@
             </ul>
           </div>
 
-          <!-- Заглушка, если сообщений нет -->
-          <div class="mail-card" v-else-if="!notification">
-            <p>📩 Нових повідомлень поки немає</p>
+          <div v-else-if="!notification" class="mail-card">
+            📩 Нових повідомлень поки немає
           </div>
         </div>
       </section>
@@ -63,7 +64,7 @@
       <main class="content">
         <div class="container grid">
           <!-- Personal info -->
-          <section class="card">
+          <section class="glass-card">
             <h3>Особисті дані</h3>
             <ul>
               <li><b>Email:</b> {{ user.gmail }}</li>
@@ -74,19 +75,25 @@
           </section>
 
           <!-- Telegram -->
-          <section class="card center">
+          <section class="glass-card center">
+            <h3>Telegram-бот</h3>
             <p>
               Керуйте профілем, нагадуваннями та планами подорожей
               через Telegram-бот.
             </p>
 
-            <a :href="telegramLink" target="_blank" class="btn-main">
+            <a
+                :href="telegramLink"
+                target="_blank"
+                class="btn-main"
+            >
               Перейти до Telegram-бота
             </a>
           </section>
 
           <!-- Navigation -->
-          <section class="card center">
+          <section class="glass-card center">
+            <h3>Навігація</h3>
             <p>Перейти на головну сторінку</p>
 
             <button class="btn-main" @click="goToMain">
@@ -95,7 +102,8 @@
           </section>
 
           <!-- Logout -->
-          <section class="card center danger">
+          <section class="glass-card center danger">
+            <h3>Обліковий запис</h3>
             <p>Вихід з облікового запису</p>
 
             <button class="btn-danger" @click="logout">
@@ -161,11 +169,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* ===== BASE ===== */
+/* ===== PAGE ===== */
 .home-page {
   min-height: 100vh;
-  background: #f4f6f8;
-  font-family: Arial, sans-serif;
+  background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+  color: #ffffff;
 }
 
 /* ===== CONTAINER ===== */
@@ -175,11 +183,13 @@ onMounted(() => {
   padding: 0 20px;
 }
 
-/* ===== TOP BAR ===== */
+/* ===== TOP BAR (GLASS) ===== */
 .top-bar {
-  background: #2563eb;
-  color: white;
-  padding: 24px 0;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 28px 0;
 }
 
 .top-content {
@@ -198,14 +208,25 @@ onMounted(() => {
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background: white;
+  background: rgba(255,255,255,0.2);
 }
 
+.user-text h2 {
+  margin: 0;
+  font-weight: 700;
+}
+
+.user-text p {
+  margin: 0;
+  opacity: 0.7;
+}
+
+/* ===== DATE ===== */
 .date {
-  background: white;
-  color: #2563eb;
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
   padding: 12px 18px;
-  border-radius: 10px;
+  border-radius: 14px;
   text-align: center;
 }
 
@@ -225,39 +246,71 @@ onMounted(() => {
   gap: 20px;
 }
 
-.card {
-  background: white;
-  padding: 20px;
-  border-radius: 12px;
+/* ===== GLASS CARD ===== */
+.glass-card {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-radius: 18px;
+  padding: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
-.card.center {
+.glass-card.center {
   text-align: center;
 }
 
-.card.danger {
-  border: 1px solid #fecaca;
+.glass-card.danger {
+  border: 1px solid rgba(255, 120, 120, 0.4);
 }
 
 /* ===== BUTTONS ===== */
 .btn-main {
   display: inline-block;
   margin-top: 16px;
-  padding: 12px 20px;
-  background: #2563eb;
+  padding: 12px 22px;
+  background: #646cff;
   color: white;
-  border-radius: 10px;
+  border-radius: 14px;
   text-decoration: none;
+  font-weight: 600;
+  transition: all 0.25s ease;
+}
+
+.btn-main:hover {
+  background: #535bf2;
+  transform: translateY(-2px);
 }
 
 .btn-danger {
   margin-top: 16px;
-  padding: 12px 20px;
-  background: #dc2626;
+  padding: 12px 22px;
+  background: rgba(220, 38, 38, 0.85);
   color: white;
-  border-radius: 10px;
+  border-radius: 14px;
   border: none;
   cursor: pointer;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
+}
+
+/* ===== MAIL ===== */
+.notification-icon {
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 10px 16px;
+  border-radius: 12px;
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+.mail-card {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 16px;
+  border-radius: 16px;
+  margin-bottom: 12px;
 }
 
 /* ===== RESPONSIVE ===== */
@@ -270,22 +323,6 @@ onMounted(() => {
     flex-direction: column;
     gap: 16px;
   }
-}
-.notification-icon {
-  cursor: pointer;
-  background: #2563eb;
-  color: white;
-  padding: 10px 16px;
-  border-radius: 10px;
-  display: inline-block;
-  margin-bottom: 10px;
-  user-select: none;
-}
-.mail-card {
-  background: white;
-  padding: 16px;
-  border-radius: 12px;
-  margin-bottom: 12px;
 }
 
 </style>

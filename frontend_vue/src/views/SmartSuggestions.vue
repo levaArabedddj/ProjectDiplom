@@ -29,7 +29,7 @@
               <button class="btn ghost" @click="resetForm">Очистити</button>
             </div>
 
-            <p class="hint">Типи — просто підказка. В backend повинен бути enum PreferenceType.</p>
+            <p class="hint"></p>
           </div>
 
           <div class="card action-card">
@@ -48,7 +48,6 @@
               <ul v-else class="list">
                 <li v-for="p in preferences" :key="p.id" class="pref-item">
                   <div class="left-info">
-                    <!-- ❌ ID НЕ ПОКАЗЫВАЕМ -->
                     <div class="type">{{ p.type }}</div>
                     <div class="value">{{ p.value }}</div>
                   </div>
@@ -146,7 +145,7 @@ const ENDPOINT = {
 
 // === UI state ===
 const form = ref({ type: '', value: '' })
-const typeOptions = ['MOOD', 'PLACE', 'ACTIVITY', 'FOOD', 'TRANSPORT'] // заменяй на enum из backend если надо
+const typeOptions = ['REGION', 'MOOD','ACTIVITY', 'FOOD', 'BUDGET', 'COMMENT', 'AVOID']
 
 const preferences = ref([])
 const showList = ref(true)
@@ -182,7 +181,6 @@ async function fetchPreferences() {
   loadingPrefs.value = true
   try {
     const res = await api.get(ENDPOINT.GET_PREFS)
-    // ожидаем массив объектов AIPreferenceResponse { id, type, value, active }
     preferences.value = Array.isArray(res.data) ? res.data : []
   } catch (e) {
     console.error('fetchPreferences error', e)
@@ -203,7 +201,6 @@ async function addPreference() {
     const payload = { type: form.value.type, value: form.value.value }
     const res = await api.post(ENDPOINT.POST_PREF, payload)
 
-    // backend может вернуть объект добавленной записи; если нет — перезапросим список
     if (res?.data?.id) {
       preferences.value.unshift(res.data)
     } else {
@@ -220,16 +217,12 @@ async function addPreference() {
 }
 
 async function togglePreference(pref) {
-  // оптимистично переключаем локально (в UI сразу видно)
   const prev = pref.active
   pref.active = !pref.active
 
   try {
     await api.put(ENDPOINT.TOGGLE_PREF(pref.id))
-    // успешно — сервер сам сделал toggle; можно обновить список из БД:
-    // await fetchPreferences()
   } catch (e) {
-    // откат при ошибке
     pref.active = prev
     console.error('toggle error', e)
     alert('Не удалось переключить желание')
@@ -238,20 +231,17 @@ async function togglePreference(pref) {
 
 
 function removePreferencePlaceholder(pref) {
-  // пока это заглушка UI — можно реализовать DELETE /api/preferences/{id} на бэке
   if (!confirm('Удалить желание локально? (Реальное удаление требует реализации бэка)')) return
   preferences.value = preferences.value.filter(p => p.id !== pref.id)
 }
 
 // === Recommendations ===
 async function requestRecommendations() {
-  // если уже запрашивали — спросим подтверждение перед новым запросом
   if (hasRequested.value) {
     const ok = confirm('Вы уверены, что хотите получить новые рекомендации? Это затронет лимиты и перезапишет текущие результаты.')
     if (!ok) return
   }
 
-  // собираем payload: можно отправлять только активные или весь список — backend сам разберётся.
   const payload = {
     preferences: preferences.value.map(p => ({
       id: p.id,
@@ -263,10 +253,8 @@ async function requestRecommendations() {
 
   loadingRecommendations.value = true
   try {
-    // Блокируем кнопку UI
     const res = await api.post(ENDPOINT.POST_RECOMMEND, payload)
 
-    // ожидаем JSON в виде { summary: "...", recommendations: [{place,country,reason}, ...] }
     const data = res.data || {}
 
     // нормализуем
@@ -275,7 +263,6 @@ async function requestRecommendations() {
     lastRequestTime.value = new Date().toLocaleString()
   } catch (e) {
     console.error('requestRecommendations error', e)
-    // пытаемся показать текст ошибки сервера
     const serverMsg = e?.response?.data?.message || ''
     alert('Ошибка при получении рекомендаций. ' + (serverMsg || 'Попробуйте позже'))
   } finally {
@@ -284,27 +271,21 @@ async function requestRecommendations() {
 }
 
 async function addToFavorites(r, idx) {
-  // Защита: если уже добавлено — ничего не делаем
   if (r.favorited || r.addingFavorite) return
 
-  // Подстраиваем данные, которые бэк ожидает (FavoritePlaceDto)
   const payload = {
     name: r.place || '',
     country: r.country || ''
   }
 
-  // помечаем локально как в процессе
   r.addingFavorite = true
   try {
     await api.post('/api/preferences/favoriteRegion', payload)
 
-    // успешно — отметим локально как добавленное
     r.favorited = true
-    // можно показать сообщение
     alert(`"${r.place}" додано в фаворити`)
   } catch (err) {
     console.error('addToFavorites error', err)
-    // если бэк возвращает сообщение — покажем
     const msg = err?.response?.data?.message || 'Помилка при додаванні в улюблені'
     alert(msg)
   } finally {

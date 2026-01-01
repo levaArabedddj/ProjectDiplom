@@ -88,5 +88,41 @@ button:focus-visible {
             #2c5364
     );
   }
+  select, option {
+    background-color: #242424;
+    color: white;
+    border: 1px solid #444;
+  }
+  @media (prefers-color-scheme: light) {
+    select, option {
+      background-color: #ffffff;
+      color: #213547;
+    }
+  }
+  label, .registration-title {
+    color: #ffffff; /* Делаем текст чисто белым */
+    margin-bottom: 5px;
+    display: block;
+  }
+
+  /* Стили для самих полей ввода */
+  input {
+    background-color: #ffffff; /* Белый фон поля */
+    color: #000000;            /* Черный текст внутри, чтобы его было видно на белом */
+    border: 1px solid #ccc;
+    padding: 8px;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box; /* Чтобы padding не раздувал ширину */
+  }
+
+  /* Исправляем селект (Пол) */
+  select {
+    background-color: #ffffff;
+    color: #000000;
+    padding: 8px;
+    border-radius: 4px;
+    width: 100%;
+  }
 
 }
