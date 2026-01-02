@@ -3,7 +3,7 @@
     <div class="container">
 
       <header class="top">
-        <button class="back" @click="goHome">← Головна</button>
+        <button @click="$router.push('/main')" class="back-btn">← Назад на головну</button>
         <h1>Інтелектуальні пропозиції — Розширені</h1>
         <p class="subtitle">Добавляйте свої бажання, вмикайте/вимикайте їх і отримуйте персоналізовані рекомендації.</p>
       </header>

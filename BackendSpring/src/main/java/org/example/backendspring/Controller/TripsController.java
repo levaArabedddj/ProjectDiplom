@@ -8,7 +8,9 @@ import org.example.backendspring.Dto.PlaceToVisitDto;
 import org.example.backendspring.Dto.TripDTO.TripDto;
 import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Service.TripsService;
+import org.example.backendspring.ServiceApi.AmadeusClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -25,6 +27,9 @@ public class TripsController {
     private final ObjectMapper mapper = new ObjectMapper();
     public final TripsService tripsService;
     private final RestTemplate restTemplate;
+    @Value("${amadeus.base-url}")
+    private String baseUrl;
+
 
     @Autowired
     public TripsController(TripsService tripsService, RestTemplate restTemplate) {
@@ -38,6 +43,11 @@ public class TripsController {
         Long userId = user.getUser_id();
         tripsService.createTrip(tripDto,userId);
         return "Карту створено";
+    }
+
+    @GetMapping()
+    public List<TripDto> getAllTrips(@AuthenticationPrincipal MyUserDetails user) {
+       return tripsService.getAllTrips(user.getUser_id());
     }
 
     @GetMapping("/{tripId}")
@@ -78,12 +88,9 @@ public class TripsController {
     }
 
     @GetMapping("/places")
-    public ResponseEntity<String> getPlaces(@RequestParam String city,
-                                            @RequestHeader("Amadeus-Authorization") String authHeader) {
-        return tripsService.getPlaces(city, authHeader);
+    public ResponseEntity<JsonNode> getPlaces(@RequestParam String city) {
+        return ResponseEntity.ok(tripsService.getPlaces(city));
     }
-
-
 
     // ✅ Сохранение места, выбранного юзером
     @PostMapping("/{tripId}/places")

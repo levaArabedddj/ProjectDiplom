@@ -11,6 +11,7 @@ import Compare from "@/views/Compare.vue"
 import SmartSuggestions from '@/views/SmartSuggestions.vue'
 import SavedData from '@/views/SavedData.vue'
 import Travel from "@/views/Travel.vue";
+import TripDetails from "@/views/TripDetails.vue";
 
 
 
@@ -72,6 +73,18 @@ const routes = [
         component: Travel,
         meta: { requiresAuth: true }
     },
+    {
+        path: '/travel',
+        name: 'Travel',
+        component: Travel,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/travel/:tripId',
+        name: 'TripDetails',
+        component: TripDetails,
+        meta: { requiresAuth: true }
+    }
 
 ]
 

@@ -2,6 +2,7 @@ package org.example.backendspring.Service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.transaction.Transactional;
 import org.example.backendspring.Dto.PlaceToVisitDto;
 import org.example.backendspring.Dto.TripDTO.FlightDto;
@@ -15,13 +16,20 @@ import org.example.backendspring.Entity.Trip;
 import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Enun.TripStatus;
 import org.example.backendspring.Repository.*;
+import org.example.backendspring.ServiceApi.AmadeusClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriUtils;
 
 import java.math.BigDecimal;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class TripsService {
@@ -35,8 +43,13 @@ public class TripsService {
     private final RestTemplate restTemplate;
     private final ObjectMapper mapper = new ObjectMapper();
     private final PlaceVisitRepo placeVisitRepo;
+    private final AmadeusClient amadeusClient;
+    @Value("${amadeus.base-url}")
+    private String baseUrl;
+    private static final Logger log = LoggerFactory.getLogger(TripsService.class.getName());
+
     @Autowired
-    public TripsService(FlightRepo flightRepo, TripsRepo tripsRepo, HotelRepo hotelRepo, PlaceCartRepo placeCartRepo, UsersRepo usersRepo, RestTemplate restTemplate, PlaceVisitRepo placeVisitRepo) {
+    public TripsService(FlightRepo flightRepo, TripsRepo tripsRepo, HotelRepo hotelRepo, PlaceCartRepo placeCartRepo, UsersRepo usersRepo, RestTemplate restTemplate, PlaceVisitRepo placeVisitRepo, AmadeusClient amadeusClient) {
         this.flightRepo = flightRepo;
         this.tripsRepo = tripsRepo;
         this.hotelRepo = hotelRepo;
@@ -44,6 +57,7 @@ public class TripsService {
         this.placeVisitRepo = placeVisitRepo;
         this.usersRepo = usersRepo;
         this.restTemplate = restTemplate;
+        this.amadeusClient = amadeusClient;
     }
 
     @Transactional
@@ -108,33 +122,58 @@ public class TripsService {
                 .build();
     }
 
-    // изменить логику что бы юзер автоматически получал интересные места а не вводил имя города
-    public ResponseEntity<String> getPlaces(String city, String authHeader) {
+    public JsonNode getPlaces(String city) {
         try {
-            String token = authHeader.replace("Bearer ", "");
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + token);
-            HttpEntity<Void> entity = new HttpEntity<>(headers);
+            double lat = 0;
+            double lon = 0;
+            boolean coordinatesFound = false;
 
+            // 1. Пытаемся найти координаты через Amadeus
+            String locUrl = "https://test.api.amadeus.com/v1/reference-data/locations"
+                    + "?keyword=" + city.trim().toUpperCase()
+                    + "&subType=CITY,AIRPORT";
 
-            String locUrl = BASE_URL + "/v1/reference-data/locations?keyword=" + city + "&subType=CITY";
-            ResponseEntity<String> locResponse = restTemplate.exchange(locUrl, HttpMethod.GET, entity, String.class);
-            JsonNode root = mapper.readTree(locResponse.getBody());
-            JsonNode data = root.get("data").get(0);
-            double lat = data.get("geoCode").get("latitude").asDouble();
-            double lon = data.get("geoCode").get("longitude").asDouble();
+            JsonNode locResponse = amadeusClient.get(locUrl);
+            JsonNode dataArray = locResponse.path("data");
 
+            if (!dataArray.isEmpty()) {
+                lat = dataArray.get(0).path("geoCode").path("latitude").asDouble();
+                lon = dataArray.get(0).path("longitude").asDouble();
+                coordinatesFound = true;
+            } else {
+                //  Если Amadeus не нашел город, используем OpenStreetMap (Nominatim)
+                log.warn("Amadeus не знайшов {}, запитуємо Nominatim...", city);
+                String osmUrl = "https://nominatim.openstreetmap.org/search?q=" + city + "&format=json&limit=1";
+                RestTemplate restTemplate = new RestTemplate();
+                JsonNode osmResponse = restTemplate.getForObject(osmUrl, JsonNode.class);
 
-            String activitiesUrl = BASE_URL + "/v1/shopping/activities?latitude=" + lat + "&longitude=" + lon + "&radius=5";
-            var actResponse = restTemplate.exchange(activitiesUrl, HttpMethod.GET, entity, String.class);
+                if (osmResponse != null && !osmResponse.isEmpty()) {
+                    lat = osmResponse.get(0).path("lat").asDouble();
+                    lon = osmResponse.get(0).path("lon").asDouble();
+                    coordinatesFound = true;
+                    log.info("Nominatim знайшов координати для {}: {}, {}", city, lat, lon);
+                }
+            }
 
-            return actResponse;
+            if (!coordinatesFound) {
+                return JsonNodeFactory.instance.objectNode().put("message", "Місто не знайдено в жодній базі");
+            }
+
+            // 2. Запрос активностей по найденным координатам
+            String activitiesUrl = "https://test.api.amadeus.com/v1/shopping/activities"
+                    + "?latitude=" + lat
+                    + "&longitude=" + lon
+                    + "&radius=20";
+
+            log.info("Запит активностей для: {}, {}", lat, lon);
+            return amadeusClient.get(activitiesUrl);
 
         } catch (Exception e) {
-            e.toString();
+            log.error("Помилка: {}", e.getMessage());
+            return JsonNodeFactory.instance.objectNode().put("error", "SERVER_ERROR").put("message", e.getMessage());
         }
-        return null;
     }
+
 
     // сохранение места которое понравилось юзеру с єтих мест
     public PlaceToVisitDto savePlaceToTrip(Long tripId, PlaceToVisitDto dto) {
@@ -170,5 +209,14 @@ public class TripsService {
     }
 
 
-
+    public List<TripDto> getAllTrips(Long userId) {
+        List<Trip> tripList = tripsRepo.findAllByUserId(userId);
+        return tripList.stream().
+                map(dto -> new TripDto().builder()
+                .id(dto.getId())
+                .cityName(dto.getCityName())
+                .startDate(dto.getStartDate()).
+                        build()
+        ).collect(Collectors.toList());
+    }
 }

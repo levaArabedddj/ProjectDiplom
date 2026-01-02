@@ -33,10 +33,20 @@
           <p>Порівняння регіонів</p>
         </div>
 
-        <div class="tile" @click="openCreateTrip">
-          <span>➕</span>
-          <h3>Створити подорож</h3>
-          <p>Заплануйте нову поїздку</p>
+        <div class="tile dual-tile">
+          <div class="tile-part" @click="openCreateTrip">
+            <span>➕</span>
+            <h3>Створити</h3>
+            <p>Нову поїздку</p>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="tile-part" @click="router.push('/travel')">
+            <span>💼</span>
+            <h3>Мої поїздки</h3>
+            <p>Переглянути всі</p>
+          </div>
         </div>
       </div>
       <CreateTripModal
@@ -159,6 +169,58 @@ function goToCompare() {
 .back-button:hover {
   background: rgba(255, 255, 255, 0.2);
   transform: translateX(-5px);
+}
+.dual-tile {
+  display: flex;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.tile-part {
+  flex: 1;
+  padding: 40px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s ease;
+}
+
+.tile-part:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.tile-part span {
+  font-size: 38px !important;
+}
+
+.tile-part h3 {
+  margin: 10px 0 5px;
+  font-size: 18px;
+  color: #ffffff;
+}
+
+.tile-part p {
+  margin-top: 0 !important;
+  font-size: 14px !important;
+  opacity: 0.8;
+}
+
+.divider {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 20px 0;
+}
+
+@media (max-width: 640px) {
+  .dual-tile {
+    flex-direction: column;
+  }
+  .divider {
+    width: 80%;
+    height: 1px;
+    margin: 0 auto;
+  }
 }
 
 
