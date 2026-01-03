@@ -1,9 +1,9 @@
 <template>
   <Teleport to="body">
-    <div class="overlay" @keydown.esc="closeOnEsc" tabindex="-1">
+    <div class="overlay" tabindex="-1">
       <div class="modal-card" @click.stop>
         <header class="modal-header">
-          <h3>Подбор мест</h3>
+          <h3>Подбор мест для поездки</h3>
           <button class="close-btn" @click="close">✖</button>
         </header>
 
@@ -11,11 +11,11 @@
           <div class="controls">
             <input
                 v-model="localCity"
-                placeholder="Город (например: Berlin)"
+                placeholder="Город (например: Vienna)"
                 @keyup.enter="fetchPlaces"
             />
             <button :disabled="loading" @click="fetchPlaces">
-              {{ loading ? 'Загружаем…' : 'Найти места' }}
+              {{ loading ? 'Поиск…' : 'Найти места' }}
             </button>
           </div>
 
@@ -23,34 +23,47 @@
 
           <div v-if="loading" class="muted">Идет поиск…</div>
 
-          <div v-if="places && places.length" class="places-list">
+          <div v-if="places.length && !loading" class="places-list">
             <div
                 v-for="(p, idx) in places"
                 :key="p.id ?? idx"
                 class="place-item"
             >
               <div class="place-main">
-                <h4>{{ p.name || p.title || p.category || 'Без названия' }}</h4>
-                <div v-if="p.description" class="desc" v-html="p.description"></div>
+                <h4>{{ p.name || 'Без названия' }}</h4>
+
+                <div
+                    v-if="p.description"
+                    class="desc"
+                    v-html="p.description"
+                ></div>
+
+                <div v-if="p.price" class="price">
+                  💰 {{ p.price.amount }} {{ p.price.currencyCode }}
+                </div>
               </div>
 
               <div class="actions">
                 <button
-                    @click="addToFavorites(p, idx)"
-                    :disabled="saving[idx]"
                     class="btn"
+                    :disabled="saving[idx] || !hasTripId"
+                    @click="addToTrip(p, idx)"
                 >
-                  {{ saving[idx] ? 'Сохраняем…' : 'Добавить в избранное' }}
+                  {{ saving[idx] ? 'Добавляем…' : (hasTripId ? 'Добавить в поездку' : 'Нет tripId') }}
                 </button>
               </div>
             </div>
           </div>
 
-          <div v-else-if="!loading" class="muted">Ничего не найдено</div>
+          <div v-else-if="!loading" class="muted">
+            Ничего не найдено
+          </div>
         </div>
 
         <footer class="modal-footer">
-          <button class="btn ghost" @click="close">Закрыть</button>
+          <button class="btn ghost" @click="close">
+            Закрыть
+          </button>
         </footer>
       </div>
     </div>
@@ -58,14 +71,14 @@
 </template>
 
 <script setup>
+import { ref, watch, onMounted, onUnmounted, computed } from 'vue'
 import api from '@/api/axios'
-import { ref, watch, onMounted, onUnmounted } from 'vue'
 
-// props / emits
 const props = defineProps({
-  city: { type: String, default: '' }
+  city: { type: String, default: '' },
+  tripId: { type: [Number, String], required: false }
 })
-const emits = defineEmits(['close', 'added'])
+const emit = defineEmits(['close', 'added'])
 
 const localCity = ref(props.city || '')
 const loading = ref(false)
@@ -73,29 +86,23 @@ const error = ref(null)
 const places = ref([])
 const saving = ref({})
 
-function handleKeydown(e) {
-  if (e.key === 'Escape') {
-    close()
-  }
-}
+const hasTripId = computed(() => {
+  return props.tripId !== undefined && props.tripId !== null && String(props.tripId) !== 'undefined'
+})
 
+function handleKeydown(e) {
+  if (e.key === 'Escape') close()
+}
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
   if (localCity.value) fetchPlaces()
 })
-
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeydown)
-})
+onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 
 watch(() => props.city, (v) => { if (v) localCity.value = v })
 
 function close() {
-  emits('close')
-}
-
-function closeOnEsc() {
-  close()
+  emit('close')
 }
 
 async function fetchPlaces() {
@@ -109,10 +116,11 @@ async function fetchPlaces() {
   try {
     const res = await api.get('/api/trips/places', { params: { city: localCity.value } })
     let data = res.data
-    // Нормализация данных (как в твоем коде)
+
     if (typeof data === 'string') {
-      try { data = JSON.parse(data) } catch (e) {}
+      try { data = JSON.parse(data) } catch (e) { /* оставляем как строку */ }
     }
+
     if (Array.isArray(data)) {
       places.value = data
     } else if (data && data.data && Array.isArray(data.data)) {
@@ -124,51 +132,64 @@ async function fetchPlaces() {
     } else {
       places.value = data ? [data] : []
     }
-  } catch (e) {
-  console.error('fetchPlaces', e)
 
-  // Проверяем, есть ли детальное сообщение от сервера
-  if (e.response && e.response.data && e.response.data.message) {
-    // Если сервер прислал "Cannot invoke...", заменим это на понятный текст
-    if (e.response.data.message.includes("Jackson") || e.response.data.error === "SERVER_ERROR") {
-      error.value = "Сервіс пошуку тимчасово недоступний для цього міста. Спробуйте інше."
-    } else {
-      error.value = e.response.data.message
+    if (!places.value.length) {
+      error.value = 'Пока не найдено результатов'
     }
-  } else {
-    error.value = 'Помилка запиту до сервера'
-  }
-} finally {
+  } catch (e) {
+    console.error('fetchPlaces', e)
+    if (e?.response?.data?.message) {
+      error.value = e.response.data.message
+    } else {
+      error.value = e?.message || 'Ошибка запроса'
+    }
+  } finally {
     loading.value = false
   }
 }
 
-async function addToFavorites(place, idx) {
+// --- добавление места в конкретную поездку ---
+async function addToTrip(place, idx) {
+  if (!hasTripId.value) {
+    error.value = 'ID поездки не указан — нельзя сохранить'
+    return
+  }
+
   saving.value = { ...saving.value, [idx]: true }
   try {
     const dto = {
+      amadeusId: place.id || place.activityId || null,
       name: place.name || place.title || place.category || 'Unknown',
-      country: place.country || place.address?.country || null
+      latitude: place.geoCode?.latitude ?? (place.location && place.location.lat) ?? null,
+      longitude: place.geoCode?.longitude ?? (place.location && place.location.lon) ?? null,
+      price: place.price?.amount ? parseFloat(place.price.amount) : null,
+      currency: place.price?.currencyCode || (place.price && place.price.currency) || null,
+      pictureUrl: Array.isArray(place.pictures) && place.pictures.length ? place.pictures[0] : (place.pictureUrl || null),
+      bookingLink: place.bookingLink || place.self?.href || null,
+      isFavorite: true
     }
-    await api.post('/api/preferences/favoriteRegion', dto)
 
-    emits('added', {
-      id: null,
-      name: dto.name,
-      country: dto.country
-    })
-    close()
+    const tripIdForUrl = encodeURIComponent(String(props.tripId))
+
+    const res = await api.post(`/api/trips/${tripIdForUrl}/places`, dto)
+
+    const saved = res?.data ?? null
+
+    emit('added', saved)
+
   } catch (e) {
-    console.error('addToFavorites', e)
-    error.value = 'Не удалось добавить в избранное'
+    console.error('addToTrip error', e)
+    if (e?.response?.data?.message) {
+      error.value = e.response.data.message
+    } else {
+      error.value = 'Не удалось добавить место в поездку'
+    }
   } finally {
     saving.value = { ...saving.value, [idx]: false }
   }
 }
 </script>
-
 <style scoped>
-/* ВАЖНО: z-index очень большой, чтобы перекрыть все меню */
 .overlay {
   position: fixed;
   inset: 0;
@@ -179,14 +200,14 @@ async function addToFavorites(place, idx) {
   justify-content: center;
   z-index: 99999;
   background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(4px); /* Размытие фона заднего плана */
+  backdrop-filter: blur(4px);
 }
 
 .modal-card {
   width: min(900px, 95%);
   max-height: 85vh;
   overflow-y: auto;
-  background: #1a2233; /* Чуть светлее черного, чтобы отличалось */
+  background: #1a2233;
   color: #e6f3ff;
   border-radius: 12px;
   box-shadow: 0 30px 60px rgba(0,0,0,0.9);

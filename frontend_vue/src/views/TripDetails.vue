@@ -101,41 +101,56 @@
           <section class="glass-card places-wrapper">
             <h2>📍 Куди піти</h2>
 
-            <!-- Уже добавленные места -->
-            <div v-if="trip.placesToVisit && trip.placesToVisit.length" class="places-list">
-              <div
-                  v-for="p in trip.placesToVisit"
-                  :key="p.id || p.name"
+            <div class="places-controls">
+              <button class="btn-small" @click="toggleShowPlaces" v-if="!showPlaces && !loadingPlaces">
+                Показати місця
+              </button>
+
+              <button class="btn-small ghost" @click="showPlaces = false" v-if="showPlaces && !loadingPlaces">
+                Сховати
+              </button>
+
+              <div v-if="loadingPlaces" class="muted">Будь ласка, зачекайте — місця завантажуються…</div>
+            </div>
+
+            <ul v-if="showPlaces && !loadingPlaces && tripPlaces.length" class="simple-places-list">
+              <li
+                  v-for="p in tripPlaces"
+                  :key="p.id"
                   class="place-mini-card"
               >
                 <div class="place-header">
                   <h4>{{ p.name }}</h4>
-                  <span class="category-tag" v-if="p.category">{{ p.category }}</span>
                 </div>
-                <p class="place-desc" v-if="p.description">{{ p.description }}</p>
-              </div>
 
-              <button class="btn-small" @click="openPlacesFinder">
-                ➕ Додати ще
-              </button>
+                <div class="place-actions">
+                  <button class="btn-small" @click="goToPlaceDetails(p.id)">
+                    Деталі →
+                  </button>
+                </div>
+              </li>
+
+              <li class="actions-row">
+                <button class="btn-small" @click="openPlacesFinder">
+                  ➕ Додати ще
+                </button>
+              </li>
+            </ul>
+
+            <div v-if="showPlaces && !loadingPlaces && !tripPlaces.length" class="empty-mini">
+              <p>Поки що місць немає</p>
+              <button class="btn-small" @click="openPlacesFinder">🔍 Підібрати місця</button>
             </div>
 
-            <!-- Если мест пока нет -->
-            <div v-else class="empty-mini">
-              <p>Список порожній</p>
-              <button class="btn-small" @click="openPlacesFinder">
-                🔍 Підібрати місця
-              </button>
-            </div>
-
-            <!-- Модалка PlacesFinder; показывает поверх страницы -->
             <PlacesFinder
                 v-if="showPlacesFinder"
                 :city="trip.cityName"
+                :tripId="trip.id"
                 @close="showPlacesFinder = false"
-                @added="onPlaceAdded"
+                @added="handlePlaceAddedFromFinder"
             />
           </section>
+
 
           <section class="glass-card weather-widget" v-if="trip?.cityName">
             <div class="ww-header">
@@ -216,14 +231,19 @@
   </div>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
-import api from '@/api/axios'
-import PlacesFinder from '@/components/PlacesFinder.vue'
 
-const route = useRoute()
-const trip = ref({
+<script setup>
+  import { ref, onMounted } from 'vue'
+  import { useRoute, useRouter } from 'vue-router'
+  import api from '@/api/axios'
+  import PlacesFinder from '@/components/PlacesFinder.vue'
+
+  const route = useRoute()
+  const router = useRouter()
+
+  // реактивная модель поездки
+  const trip = ref({
+  id: null,
   cityName: '',
   startDate: null,
   endDate: null,
@@ -233,68 +253,106 @@ const trip = ref({
   hotels: [],
   placesToVisit: []
 })
-const weatherList = ref([])
-const selectedDay = ref(0)
-const showPlacesFinder = ref(false)
-function openPlacesFinder() {
+
+  const weatherList = ref([])
+  const selectedDay = ref(0)
+  const showPlacesFinder = ref(false)
+
+  function openPlacesFinder() {
   showPlacesFinder.value = true
 }
+  const showPlaces = ref(false)         // флаг отобразить список
+  const loadingPlaces = ref(false)      // индикатор загрузки
+  const tripPlaces = ref([])            // массив упрощённых мест (id, name, category)
 
-// вызов после успешного добавления места в модалке
-function onPlaceAdded(placeDto) {
-  // Убедимся, что массив существует
-  if (!trip.value.placesToVisit) trip.value.placesToVisit = []
-  // Добавим в начало, чтобы пользователь видел свежий элемент
-  trip.value.placesToVisit.unshift({
-    id: placeDto.id || `temp-${Date.now()}`, // временный id если бек ещё не вернул
-    name: placeDto.name,
-    country: placeDto.country,
-    description: placeDto.description || ''
-  })
-  // Закроем модалку
-  showPlacesFinder.value = false
-}
-// Запрос погоды (возвращает массив прогнозов)
-const fetchWeather = async (city, dayOffset = 0) => {
-  if (!city) return
-  try {
-    const response = await api.get('/api/weather/weather', {
+  function goToPlaceDetails(placeId) {
+    if (!placeId || !trip.value?.id) return
+
+    router.push({
+      name: 'PlaceDetails',
       params: {
-        city: city,
-        dayOffset: dayOffset
+        tripId: trip.value.id,
+        placeId: placeId
       }
     })
-    weatherList.value = response.data || []
-  } catch (e) {
-    console.error('Ошибка погоды', e)
-    weatherList.value = []
   }
+
+  function toggleShowPlaces() {
+    if (showPlaces.value) {
+      showPlaces.value = false
+      return
+    }
+    showPlaces.value = true
+    if (!tripPlaces.value.length) {
+      loadTripPlaces()
+    }
+  }
+
+  async function loadTripPlaces() {
+    if (!trip.value?.id) return
+    loadingPlaces.value = true
+    tripPlaces.value = []
+    try {
+      const res = await api.get(`/api/trips/${trip.value.id}/places`)
+      tripPlaces.value = Array.isArray(res.data) ? res.data : []
+    } catch (e) {
+      console.error('loadTripPlaces error', e)
+    } finally {
+      loadingPlaces.value = false
+    }
+  }
+
+  function handlePlaceAddedFromFinder(savedPlace) {
+    if (!tripPlaces.value) tripPlaces.value = []
+    if (!savedPlace) {
+      if (showPlaces.value) loadTripPlaces()
+      return
+    }
+    tripPlaces.value.unshift(savedPlace)
+    showPlacesFinder.value = false
+  }
+
+  async function fetchTrip() {
+  const tripId = route.params.tripId
+  if (!tripId) return
+  try {
+  const tripResponse = await api.get(`/api/trips/${tripId}`)
+  trip.value = tripResponse.data
+} catch (e) {
+  console.error('fetchTrip error', e)
+}
 }
 
-const changeDay = async (day) => {
+  const fetchWeather = async (city, dayOffset = 0) => {
+  if (!city) return
+  try {
+  const response = await api.get('/api/weather/weather', {
+  params: { city: city, dayOffset }
+})
+  weatherList.value = response.data || []
+} catch (e) {
+  console.error('Ошибка погоды', e)
+  weatherList.value = []
+}
+}
+
+  const changeDay = async (day) => {
   selectedDay.value = day
   await fetchWeather(trip.value.cityName, day)
 }
 
 
-onMounted(async () => {
-  const tripId = route.params.tripId
 
-  try {
-    const tripResponse = await api.get(`/api/trips/${tripId}`)
-    trip.value = tripResponse.data
-
-    if (trip.value.cityName) {
-      await fetchWeather(trip.value.cityName, selectedDay.value)
-    }
-  } catch (e) {
-    console.error(e)
-  }
+  onMounted(async () => {
+  await fetchTrip()
+  if (trip.value.cityName) {
+  await fetchWeather(trip.value.cityName, selectedDay.value)
+}
 })
 
-
-function formatDate(d) { return d ? new Date(d).toLocaleDateString('uk-UA') : '—' }
-function formatTime(d) { return d ? new Date(d).toLocaleTimeString('uk-UA', {hour: '2-digit', minute:'2-digit'}) : '--:--' }
+  // маленькие утилиты
+  function formatDate(d) { return d ? new Date(d).toLocaleDateString('uk-UA') : '—' }
+  function formatTime(d) { return d ? new Date(d).toLocaleTimeString('uk-UA', {hour: '2-digit', minute:'2-digit'}) : '--:--' }
 </script>
 
 
@@ -539,4 +597,10 @@ function formatTime(d) { return d ? new Date(d).toLocaleTimeString('uk-UA', {hou
   font-size: 0.8rem;
 }
 .h-time { opacity: 0.6; margin-bottom: 4px; }
+
+.places-controls { margin-bottom: 8px; display:flex; gap:8px; align-items:center; }
+.simple-places-list { list-style:none; padding:0; margin:0; display:block; gap:8px; }
+.place-mini-card { padding:10px; border-radius:8px; background: rgba(255,255,255,0.02); margin-bottom:8px; }
+.actions-row { margin-top:10px; }
+
 </style>

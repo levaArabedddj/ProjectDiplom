@@ -12,6 +12,7 @@ import SmartSuggestions from '@/views/SmartSuggestions.vue'
 import SavedData from '@/views/SavedData.vue'
 import Travel from "@/views/Travel.vue";
 import TripDetails from "@/views/TripDetails.vue";
+import PlaceVisitDetails from "@/views/PlaceVisitDetails.vue";
 
 
 
@@ -83,6 +84,12 @@ const routes = [
         path: '/travel/:tripId',
         name: 'TripDetails',
         component: TripDetails,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/trips/:tripId/places/:placeId',
+        name: 'PlaceDetails',
+        component: PlaceVisitDetails,
         meta: { requiresAuth: true }
     }
 

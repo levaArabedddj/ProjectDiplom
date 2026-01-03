@@ -16,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.nio.file.AccessDeniedException;
 import java.util.List;
 
 @Slf4j
@@ -93,14 +94,14 @@ public class TripsController {
     }
 
     // ✅ Сохранение места, выбранного юзером
-    @PostMapping("/{tripId}/places")
-    public ResponseEntity<PlaceToVisitDto> savePlace(
-            @PathVariable Long tripId,
-            @RequestBody PlaceToVisitDto placeDto
-    ) {
-        PlaceToVisitDto saved = tripsService.savePlaceToTrip(tripId, placeDto);
-        return ResponseEntity.ok(saved);
-    }
+//    @PostMapping("/{tripId}/places")
+//    public ResponseEntity<PlaceToVisitDto> savePlace(
+//            @PathVariable Long tripId,
+//            @RequestBody PlaceToVisitDto placeDto
+//    ) {
+//        PlaceToVisitDto saved = tripsService.savePlaceToTrip(tripId, placeDto);
+//        return ResponseEntity.ok(saved);
+//    }
 
 //    @PatchMapping("/{tripId}/updateBalance")
 //    public ResponseEntity<String> updateBalance(@RequestBody TripDto tripDto,
@@ -111,4 +112,31 @@ public class TripsController {
 //        tripsService.updateBalanceTrip(tripId, tripDto, userId);
 //        return ResponseEntity.ok("Передано дані");
 //    }
+
+    @PostMapping("/{tripId}/places")
+    public ResponseEntity<PlaceToVisitDto> addPlaceToTrip(
+            @PathVariable Long tripId,
+            @RequestBody PlaceToVisitDto dto,
+            @AuthenticationPrincipal MyUserDetails currentUser) throws AccessDeniedException {
+
+        // можно дополнительно проверять, что trip принадлежит currentUser
+        PlaceToVisitDto saved = tripsService.addPlaceToTrip(tripId, dto, currentUser.getUser_id());
+        return ResponseEntity.ok(saved);
+    }
+
+    @GetMapping("/{tripId}/places")
+    public ResponseEntity<List<PlaceToVisitDto>> getPlacesForTrip(
+            @PathVariable Long tripId,
+            @AuthenticationPrincipal MyUserDetails currentUser) throws AccessDeniedException {
+
+        List<PlaceToVisitDto> list = tripsService.getPlacesForTrip(tripId, currentUser.getUser_id());
+        return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/{tripId}/places/{placeId}")
+    public PlaceToVisitDto getPlaceDetails(@PathVariable Long tripId, @PathVariable Long placeId,
+                                           @AuthenticationPrincipal MyUserDetails user)
+            throws AccessDeniedException {
+        return tripsService.getPlaceDetailsForTrip(tripId, placeId, user.getUser_id());
+    }
 }

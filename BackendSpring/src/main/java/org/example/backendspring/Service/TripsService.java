@@ -27,6 +27,7 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriUtils;
 
 import java.math.BigDecimal;
+import java.nio.file.AccessDeniedException;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -116,9 +117,9 @@ public class TripsService {
                 .hotels(trip.getHotels().stream()
                         .map(h -> new HotelDto(h.getId(), h.getName(), h.getAddress(), h.getStars(),h.getCheckInDate(),h.getCheckOutDate(),h.getPricePerNight(),h.getCurrency(),h.getTotalPrice(),h.getBookingUrl(),h.getType()))
                         .toList())
-                .placesToVisit(trip.getPlacesToVisit().stream()
-                        .map(p -> new PlaceCartDto(p.getId(), p.getName(), p.getDescription(),p.getCategory(),p.getAddress(),p.getGeoCoordinates(),p.getEstimatedVisitTime(),p.getPrice(),p.getCurrency(),p.getSource(),p.getIsFavorite()))
-                        .toList())
+//                .placesToVisit(trip.getPlacesToVisit().stream()
+//                        .map(p -> new PlaceCartDto(p.getId(), p.getName(), p.getDescription(),p.getCategory(),p.getAddress(),p.getGeoCoordinates(),p.getEstimatedVisitTime(),p.getPrice(),p.getCurrency(),p.getSource(),p.getIsFavorite()))
+//                        .toList())
                 .build();
     }
 
@@ -160,10 +161,12 @@ public class TripsService {
             }
 
             // 2. Запрос активностей по найденным координатам
+            int limit = 50;
             String activitiesUrl = "https://test.api.amadeus.com/v1/shopping/activities"
                     + "?latitude=" + lat
                     + "&longitude=" + lon
-                    + "&radius=20";
+                    + "&radius=5"
+                    + "&page[limit]=" + limit;
 
             log.info("Запит активностей для: {}, {}", lat, lon);
             return amadeusClient.get(activitiesUrl);
@@ -176,37 +179,37 @@ public class TripsService {
 
 
     // сохранение места которое понравилось юзеру с єтих мест
-    public PlaceToVisitDto savePlaceToTrip(Long tripId, PlaceToVisitDto dto) {
-        Trip trip = tripsRepo.findById(tripId)
-                .orElseThrow(() -> new RuntimeException("Trip not found: " + tripId));
-
-        PlaceToVisitTrips place = PlaceToVisitTrips.builder()
-                .amadeusId(dto.getAmadeusId())
-                .name(dto.getName())
-                .latitude(dto.getLatitude())
-                .longitude(dto.getLongitude())
-                .price(dto.getPrice())
-                .currency(dto.getCurrency())
-                .pictureUrl(dto.getPictureUrl())
-                .bookingLink(dto.getBookingLink())
-                .isFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false)
-                .trip(trip)
-                .build();
-
-        place = placeVisitRepo.save(place);
-
-        return PlaceToVisitDto.builder()
-                .amadeusId(place.getAmadeusId())
-                .name(place.getName())
-                .latitude(place.getLatitude())
-                .longitude(place.getLongitude())
-                .price(place.getPrice())
-                .currency(place.getCurrency())
-                .pictureUrl(place.getPictureUrl())
-                .bookingLink(place.getBookingLink())
-                .isFavorite(place.getIsFavorite())
-                .build();
-    }
+//    public PlaceToVisitDto savePlaceToTrip(Long tripId, PlaceToVisitDto dto) {
+//        Trip trip = tripsRepo.findById(tripId)
+//                .orElseThrow(() -> new RuntimeException("Trip not found: " + tripId));
+//
+//        PlaceToVisitTrips place = PlaceToVisitTrips.builder()
+//                .amadeusId(dto.getAmadeusId())
+//                .name(dto.getName())
+//                .latitude(dto.getLatitude())
+//                .longitude(dto.getLongitude())
+//                .price(dto.getPrice())
+//                .currency(dto.getCurrency())
+//                .pictureUrl(dto.getPictureUrl())
+//                .bookingLink(dto.getBookingLink())
+//                .isFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false)
+//                .trip(trip)
+//                .build();
+//
+//        place = placeVisitRepo.save(place);
+//
+//        return PlaceToVisitDto.builder()
+//                .amadeusId(place.getAmadeusId())
+//                .name(place.getName())
+//                .latitude(place.getLatitude())
+//                .longitude(place.getLongitude())
+//                .price(place.getPrice())
+//                .currency(place.getCurrency())
+//                .pictureUrl(place.getPictureUrl())
+//                .bookingLink(place.getBookingLink())
+//                .isFavorite(place.getIsFavorite())
+//                .build();
+//    }
 
 
     public List<TripDto> getAllTrips(Long userId) {
@@ -219,4 +222,91 @@ public class TripsService {
                         build()
         ).collect(Collectors.toList());
     }
+
+    @Transactional
+    public PlaceToVisitDto addPlaceToTrip(Long tripId, PlaceToVisitDto dto, Long userId) throws AccessDeniedException {
+        Trip trip = tripsRepo.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found"));
+
+        // опционально: проверить владельца
+        if (!trip.getUser().getUser_id().equals(userId)) {
+            throw new AccessDeniedException("Trip does not belong to user");
+        }
+
+        PlaceToVisitTrips entity = new PlaceToVisitTrips();
+        entity.setAmadeusId(dto.getAmadeusId());
+        entity.setName(dto.getName());
+        entity.setLatitude(dto.getLatitude());
+        entity.setLongitude(dto.getLongitude());
+        entity.setPrice(dto.getPrice() != null ? dto.getPrice().doubleValue() : null);
+        entity.setCurrency(dto.getCurrency());
+        entity.setPictureUrl(dto.getPictureUrl());
+        entity.setBookingLink(dto.getBookingLink());
+        entity.setIsFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : Boolean.TRUE);
+        entity.setTrip(trip);
+
+        PlaceToVisitTrips saved = placeVisitRepo.save(entity);
+
+        // вернуть DTO
+        return PlaceToVisitDto.builder()
+                .id(saved.getId())
+                .amadeusId(saved.getAmadeusId())
+                .name(saved.getName())
+                .latitude(saved.getLatitude())
+                .longitude(saved.getLongitude())
+                .price(saved.getPrice() != null ? BigDecimal.valueOf(saved.getPrice()) : null)
+                .currency(saved.getCurrency())
+                .pictureUrl(saved.getPictureUrl())
+                .bookingLink(saved.getBookingLink())
+                .isFavorite(saved.getIsFavorite())
+                .build();
+    }
+
+    public List<PlaceToVisitDto> getPlacesForTrip(Long tripId, Long userId) throws AccessDeniedException {
+        Trip trip = tripsRepo.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found: " + tripId));
+
+        if (!trip.getUser().getUser_id().equals(userId)) {
+            throw new AccessDeniedException("Trip does not belong to user");
+        }
+
+        List<PlaceToVisitTrips> places = placeVisitRepo.findAllByTripId(tripId);
+
+        return places.stream()
+                .map(p -> new PlaceToVisitDto(p.getId(), p.getName()))
+                .collect(Collectors.toList());
+    }
+
+    public PlaceToVisitDto getPlaceDetailsForTrip(Long tripId, Long placeId, Long userId)
+            throws AccessDeniedException {
+
+        Trip trip = tripsRepo.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found: " + tripId));
+
+        // Проверка владельца поездки
+        if (!trip.getUser().getUser_id().equals(userId)) {
+            throw new AccessDeniedException("Trip does not belong to user");
+        }
+
+        PlaceToVisitTrips place = placeVisitRepo
+                .findByIdAndTripId(placeId, tripId)
+                .orElseThrow(() ->
+                        new RuntimeException("Place not found: " + placeId)
+                );
+
+        return PlaceToVisitDto.builder()
+                .id(place.getId())
+                .amadeusId(place.getAmadeusId())
+                .name(place.getName())
+                .latitude(place.getLatitude())
+                .longitude(place.getLongitude())
+                .price(BigDecimal.valueOf(place.getPrice()))
+                .currency(place.getCurrency())
+                .pictureUrl(place.getPictureUrl())
+                .bookingLink(place.getBookingLink())
+                .isFavorite(place.getIsFavorite())
+                .build();
+    }
+
+
 }
