@@ -118,7 +118,7 @@ async function fetchPlaces() {
     let data = res.data
 
     if (typeof data === 'string') {
-      try { data = JSON.parse(data) } catch (e) { /* оставляем как строку */ }
+      try { data = JSON.parse(data) } catch (e) {  }
     }
 
     if (Array.isArray(data)) {
@@ -148,7 +148,7 @@ async function fetchPlaces() {
   }
 }
 
-// --- добавление места в конкретную поездку ---
+
 async function addToTrip(place, idx) {
   if (!hasTripId.value) {
     error.value = 'ID поездки не указан — нельзя сохранить'
@@ -164,7 +164,7 @@ async function addToTrip(place, idx) {
       longitude: place.geoCode?.longitude ?? (place.location && place.location.lon) ?? null,
       price: place.price?.amount ? parseFloat(place.price.amount) : null,
       currency: place.price?.currencyCode || (place.price && place.price.currency) || null,
-      pictureUrl: Array.isArray(place.pictures) && place.pictures.length ? place.pictures[0] : (place.pictureUrl || null),
+      pictureUrls: Array.isArray(place.pictures) ? place.pictures : [],
       bookingLink: place.bookingLink || place.self?.href || null,
       isFavorite: true
     }

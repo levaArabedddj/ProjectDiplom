@@ -1,65 +1,85 @@
 package org.example.backendspring.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.example.backendspring.Dto.DtoAmadeus.Fly.FlightOfferDTO;
 import org.example.backendspring.Dto.DtoAmadeus.Fly.FlightResponse;
 import org.example.backendspring.Dto.DtoAmadeus.Fly.FlightSearchRequest;
 
 
+import org.example.backendspring.Entity.Booking;
+import org.example.backendspring.Entity.Users;
+import org.example.backendspring.Repository.BookingRepo;
+import org.example.backendspring.Repository.UsersRepo;
+import org.example.backendspring.ServiceApi.AmadeusClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
 public class AmadeusFlightService {
 
     private final RestTemplate restTemplate;
     private final String API_URL = "https://test.api.amadeus.com/v2/shopping/flight-offers";
-
-
+    private final AmadeusClient amadeusClient;
+    private static final String API_BASE = "https://test.api.amadeus.com";
+    private final Map<String, String> iataCache = new ConcurrentHashMap<>();
+    private final Map<String, FlightOfferDTO> offersCache = new ConcurrentHashMap<>();
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private final BookingRepo bookingRepository;
+    private final UsersRepo usersRepo;
     @Autowired
-    public AmadeusFlightService(RestTemplate restTemplate) {
+    public AmadeusFlightService(RestTemplate restTemplate, AmadeusClient amadeusClient, BookingRepo bookingRepository, UsersRepo usersRepo) {
         this.restTemplate = restTemplate;
+        this.amadeusClient = amadeusClient;
+        this.bookingRepository = bookingRepository;
+        this.usersRepo = usersRepo;
     }
 
-    public List<FlightResponse> searchFlights(FlightSearchRequest request, String accessToken) {
+    public List<FlightResponse> searchFlights(FlightSearchRequest request) {
+        String originCode = resolveToIata(request.getOrigin());
+        String destinationCode = resolveToIata(request.getDestination());
+
+        if (originCode == null || destinationCode == null) {
+            throw new RuntimeException("Не удалось определить IATA код для: " +
+                    (originCode == null ? request.getOrigin() : request.getDestination()));
+        }
+
         UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(API_URL)
-                .queryParam("originLocationCode", request.getOrigin())
-                .queryParam("destinationLocationCode", request.getDestination())
+                .queryParam("originLocationCode", originCode)
+                .queryParam("destinationLocationCode", destinationCode)
                 .queryParam("departureDate", request.getDepartureDate())
                 .queryParam("adults", request.getAdults())
                 .queryParam("nonStop", request.getNonStop() != null ? request.getNonStop() : false);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken); // токен от Amadeus
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-
-        ResponseEntity<String> response = restTemplate.exchange(
-                uriBuilder.toUriString(),
-                HttpMethod.GET,
-                entity,
-                String.class
-        );
-
-
-        // можно использовать Jackson ObjectMapper
-        ObjectMapper mapper = new ObjectMapper();
-        List<FlightResponse> flights = new ArrayList<>();
+        List<FlightResponse> liteFlights = new ArrayList<>();
 
         try {
-            JsonNode root = mapper.readTree(response.getBody()).path("data");
+
+            JsonNode root = amadeusClient.get(uriBuilder.toUriString()).path("data");
+
             for (JsonNode flightNode : root) {
+                String flightId = flightNode.path("id").asText();
+
+                FlightOfferDTO fullOffer = objectMapper.treeToValue(flightNode, FlightOfferDTO.class);
+                offersCache.put(flightId, fullOffer);
                 JsonNode segment = flightNode.path("itineraries").get(0).path("segments").get(0);
                 FlightResponse fr = new FlightResponse();
+                fr.setId(flightId);
                 fr.setAirline(segment.path("carrierCode").asText());
                 fr.setFlightNumber(segment.path("number").asText());
                 fr.setDepartureAirport(segment.path("departure").path("iataCode").asText());
@@ -69,40 +89,34 @@ public class AmadeusFlightService {
                 fr.setDuration(flightNode.path("itineraries").get(0).path("duration").asText());
                 fr.setAircraft(segment.path("aircraft").path("code").asText());
                 fr.setPrice(flightNode.path("price").path("total").asDouble());
-                flights.add(fr);
+                liteFlights.add(fr);
             }
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        return flights;
+        return liteFlights;
     }
 
+    public List<FlightOfferDTO> searchFlightsDetailed(FlightSearchRequest request) {
+            String originCode = resolveToIata(request.getOrigin());
+            String destinationCode = resolveToIata(request.getDestination());
 
-    public List<FlightOfferDTO> searchFlightsDetailed(FlightSearchRequest request, String accessToken) {
-        UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(API_URL)
-                .queryParam("originLocationCode", request.getOrigin())
-                .queryParam("destinationLocationCode", request.getDestination())
-                .queryParam("departureDate", request.getDepartureDate())
-                .queryParam("adults", request.getAdults())
-                .queryParam("nonStop", request.getNonStop() != null ? request.getNonStop() : false);
+            if (originCode == null || destinationCode == null) {
+                throw new RuntimeException("Не удалось определить IATA код для: " +
+                        (originCode == null ? request.getOrigin() : request.getDestination()));
+            }
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
-        HttpEntity<String> entity = new HttpEntity<>(headers);
-
-        ResponseEntity<String> response = restTemplate.exchange(
-                uriBuilder.toUriString(),
-                HttpMethod.GET,
-                entity,
-                String.class
-        );
-
-        ObjectMapper mapper = new ObjectMapper();
+            UriComponentsBuilder uriBuilder = UriComponentsBuilder.fromHttpUrl(API_URL)
+                    .queryParam("originLocationCode", originCode)
+                    .queryParam("destinationLocationCode", destinationCode)
+                    .queryParam("departureDate", request.getDepartureDate())
+                    .queryParam("adults", request.getAdults())
+                    .queryParam("nonStop", request.getNonStop() != null ? request.getNonStop() : false);
         List<FlightOfferDTO> flights = new ArrayList<>();
 
         try {
-            JsonNode root = mapper.readTree(response.getBody());
+            JsonNode root = amadeusClient.get(uriBuilder.toUriString());
             JsonNode dataNode = root.path("data");
             JsonNode dictionariesNode = root.path("dictionaries");
 
@@ -117,7 +131,6 @@ public class AmadeusFlightService {
                 flight.setLastTicketingDate(flightNode.path("lastTicketingDate").asText());
                 flight.setNumberOfBookableSeats(flightNode.path("numberOfBookableSeats").asInt());
 
-                // Itineraries
                 List<FlightOfferDTO.Itinerary> itineraries = new ArrayList<>();
                 for (JsonNode itinNode : flightNode.path("itineraries")) {
                     FlightOfferDTO.Itinerary itin = new FlightOfferDTO.Itinerary();
@@ -132,7 +145,6 @@ public class AmadeusFlightService {
                         seg.setNumberOfStops(segNode.path("numberOfStops").asInt());
                         seg.setBlacklistedInEU(segNode.path("blacklistedInEU").asBoolean());
 
-                        // Departure & Arrival
                         FlightOfferDTO.DepartureArrival dep = new FlightOfferDTO.DepartureArrival();
                         dep.setIataCode(segNode.path("departure").path("iataCode").asText());
                         dep.setAt(segNode.path("departure").path("at").asText());
@@ -143,12 +155,10 @@ public class AmadeusFlightService {
                         arr.setAt(segNode.path("arrival").path("at").asText());
                         seg.setArrival(arr);
 
-                        // Aircraft
                         FlightOfferDTO.Aircraft aircraft = new FlightOfferDTO.Aircraft();
                         aircraft.setCode(segNode.path("aircraft").path("code").asText());
                         seg.setAircraft(aircraft);
 
-                        // Operating
                         FlightOfferDTO.Operating operating = new FlightOfferDTO.Operating();
                         operating.setCarrierCode(segNode.path("operating").path("carrierCode").asText());
                         seg.setOperating(operating);
@@ -160,7 +170,6 @@ public class AmadeusFlightService {
                 }
                 flight.setItineraries(itineraries);
 
-                // Price
                 JsonNode priceNode = flightNode.path("price");
                 FlightOfferDTO.Price price = new FlightOfferDTO.Price();
                 price.setCurrency(priceNode.path("currency").asText());
@@ -178,7 +187,6 @@ public class AmadeusFlightService {
                 price.setFees(fees);
                 flight.setPrice(price);
 
-                // Pricing Options
                 JsonNode poNode = flightNode.path("pricingOptions");
                 FlightOfferDTO.PricingOptions po = new FlightOfferDTO.PricingOptions();
                 List<String> fareType = new ArrayList<>();
@@ -187,12 +195,10 @@ public class AmadeusFlightService {
                 po.setIncludedCheckedBagsOnly(poNode.path("includedCheckedBagsOnly").asBoolean());
                 flight.setPricingOptions(po);
 
-                // Validating Airlines
                 List<String> valAirlines = new ArrayList<>();
                 flightNode.path("validatingAirlineCodes").forEach(a -> valAirlines.add(a.asText()));
                 flight.setValidatingAirlineCodes(valAirlines);
 
-                // Traveler Pricings
                 List<FlightOfferDTO.TravelerPricing> travelerPricings = new ArrayList<>();
                 for (JsonNode tpNode : flightNode.path("travelerPricings")) {
                     FlightOfferDTO.TravelerPricing tp = new FlightOfferDTO.TravelerPricing();
@@ -200,14 +206,13 @@ public class AmadeusFlightService {
                     tp.setFareOption(tpNode.path("fareOption").asText());
                     tp.setTravelerType(tpNode.path("travelerType").asText());
 
-                    // Price
+
                     FlightOfferDTO.Price tpPrice = new FlightOfferDTO.Price();
                     tpPrice.setCurrency(tpNode.path("price").path("currency").asText());
                     tpPrice.setTotal(tpNode.path("price").path("total").asText());
                     tpPrice.setBase(tpNode.path("price").path("base").asText());
                     tp.setPrice(tpPrice);
 
-                    // Fare Details By Segment
                     List<FlightOfferDTO.FareDetailsBySegment> fdbsList = new ArrayList<>();
                     for (JsonNode fdbsNode : tpNode.path("fareDetailsBySegment")) {
                         FlightOfferDTO.FareDetailsBySegment fdbs = new FlightOfferDTO.FareDetailsBySegment();
@@ -232,7 +237,6 @@ public class AmadeusFlightService {
                 }
                 flight.setTravelerPricings(travelerPricings);
 
-                // Dictionaries
                 FlightOfferDTO.Dictionaries dict = new FlightOfferDTO.Dictionaries();
                 ObjectMapper dictMapper = new ObjectMapper();
                 dict.setLocations(dictMapper.convertValue(dictionariesNode.path("locations"),
@@ -254,24 +258,79 @@ public class AmadeusFlightService {
         return flights;
     }
 
-    public Object bookFlight(Map<String, Object> request, String token) {
+    public Object bookFlight(Map<String, Object> request, Long user) {
+        String token = amadeusClient.getAccessTokenValue();
+
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(request, headers);
 
-        ResponseEntity<Object> response = restTemplate.exchange(
+        ResponseEntity<String> response = restTemplate.exchange(
                 "https://test.api.amadeus.com/v1/booking/flight-orders",
                 HttpMethod.POST,
                 entity,
-                Object.class
+                String.class
         );
+        try {
+            Users users = usersRepo.findById(user).orElseThrow(()-> new UsernameNotFoundException("User not found"));
+            // 1. Превращаем строку ответа в JSON-дерево для удобного чтения
+            JsonNode root = objectMapper.readTree(response.getBody());
+            JsonNode data = root.path("data");
 
-        return response.getBody();
+            // 2. Достаем ключевые поля для таблицы
+            String amadeusOrderId = data.path("id").asText();
+            String pnr = data.path("associatedRecords").get(0).path("reference").asText();
+
+            JsonNode firstOffer = data.path("flightOffers").get(0);
+            // Цена!!
+            double totalPrice = data.path("flightOffers").get(0).path("price").path("grandTotal").asDouble();
+            String currency = data.path("flightOffers").get(0).path("price").path("currency").asText();
+            JsonNode firstItinerary = firstOffer.path("itineraries").get(0);
+            JsonNode firstSegment = firstItinerary.path("segments").get(0);
+            JsonNode lastSegment = firstItinerary.path("segments").get(firstItinerary.path("segments").size() - 1);
+
+            String origin = firstSegment.path("departure").path("iataCode").asText();
+            String destination = lastSegment.path("arrival").path("iataCode").asText();
+
+            String departureAtRaw = firstSegment.path("departure").path("at").asText();
+            LocalDateTime departureDate = LocalDateTime.parse(departureAtRaw);
+
+            String carrier = firstSegment.path("carrierCode").asText();
+            String flightNum = firstSegment.path("number").asText();
+            // 3. Создаем и сохраняем сущность Booking
+            Booking booking = Booking.builder()
+                    .user(users)
+                    .amadeusOrderId(amadeusOrderId)
+                    .pnrReference(pnr)
+                    .originLocation(origin)
+                    .destinationLocation(destination)
+                    .departureDate(departureDate)
+                    .airlineCode(carrier)
+                    .flightNumber(flightNum)
+                    .totalPrice(totalPrice)
+                    .currency(currency)
+                    .status("CONFIRMED")
+                    .fullJsonData(response.getBody())
+                    .build();
+
+            bookingRepository.save(booking);
+
+            log.info("Booking saved successfully with ID: " + booking.getId() + " and PNR: " + pnr);
+
+
+            return root;
+
+        } catch (Exception e) {
+            log.error("Error saving booking: ", e);
+            throw new RuntimeException("Booking created in Amadeus but failed to save in DB", e);
+        }
     }
 
-    public Object getFlightPricing(Map<String, Object> request, String token) {
+    public Object getFlightPricing(Map<String, Object> request) {
+        String token = amadeusClient.getAccessTokenValue();
+
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -285,10 +344,72 @@ public class AmadeusFlightService {
                 Object.class
         );
 
+        log.info(response.getBody().toString());
         return response.getBody();
     }
 
+    public JsonNode searchLocations(String keyword) {
+        String url = String.format(
+                API_BASE + "/v1/reference-data/locations?subType=CITY,AIRPORT&keyword=%s&view=LIGHT",
+                keyword
+        );
+        return amadeusClient.get(url);
+    }
 
+    public String resolveToIata(String keyword) {
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return null;
+        }
 
-}
+        String cacheKey = keyword.trim().toLowerCase();
+        if (iataCache.containsKey(cacheKey)) {
+            return iataCache.get(cacheKey);
+        }
+
+        String upperKeyword = keyword.trim().toUpperCase();
+        if (upperKeyword.matches("[A-Z]{3}")) {
+            iataCache.put(cacheKey, upperKeyword);
+            return upperKeyword;
+        }
+
+        try {
+            JsonNode rootNode = searchLocations(keyword);
+            JsonNode locations = rootNode.path("data");
+            if (locations.isMissingNode() || !locations.isArray() || locations.isEmpty()) {
+                return null;
+            }
+
+            for (JsonNode item : locations) {
+                String subType = item.path("subType").asText("");
+                if ("CITY".equalsIgnoreCase(subType) || "city".equalsIgnoreCase(subType)) {
+                    String iata = item.path("iataCode").asText("");
+                    if (iata != null && !iata.isEmpty()) {
+                        String result = iata.toUpperCase();
+                        iataCache.put(cacheKey, result);
+                        return result;
+                    }
+                }
+            }
+
+            for (JsonNode item : locations) {
+                String iata = item.path("iataCode").asText("");
+                if (iata != null && !iata.isEmpty()) {
+                    String result = iata.toUpperCase();
+                    iataCache.put(cacheKey, result);
+                    return result;
+                }
+            }
+
+            return null;
+        } catch (Exception e) {
+            System.err.println("Ошибка при поиске IATA для '" + keyword + "': " + e.getMessage());
+            return null;
+        }
+    }
+    public FlightOfferDTO getFlightById(String id) {
+        log.info(String.valueOf(offersCache.get(id)));
+        return offersCache.get(id);
+    }
+
+    }
 

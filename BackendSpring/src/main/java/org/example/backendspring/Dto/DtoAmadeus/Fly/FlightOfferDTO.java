@@ -1,5 +1,7 @@
 package org.example.backendspring.Dto.DtoAmadeus.Fly;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.util.List;
@@ -10,9 +12,11 @@ import java.util.Map;
 @AllArgsConstructor
 @NoArgsConstructor
 @Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class FlightOfferDTO {
 
     private String id;
+    private String type;
     private String source;
     private boolean instantTicketingRequired;
     private boolean nonHomogeneous;
@@ -37,6 +41,7 @@ public class FlightOfferDTO {
 
     @Data
     public static class Segment {
+        private String id;
         private DepartureArrival departure;
         private DepartureArrival arrival;
         private String carrierCode;
@@ -52,6 +57,7 @@ public class FlightOfferDTO {
     public static class DepartureArrival {
         private String iataCode;
         private String at;
+        private String terminal;
     }
 
     @Data
@@ -94,7 +100,8 @@ public class FlightOfferDTO {
         private String segmentId;
         private String cabin;
         private String fareBasis;
-        private String clazz; // class нельзя использовать
+        @JsonProperty("class")
+        private String clazz;
         private IncludedBags includedCheckedBags;
         private IncludedBags includedCabinBags;
     }

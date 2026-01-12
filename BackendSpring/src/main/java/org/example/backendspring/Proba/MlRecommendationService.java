@@ -18,7 +18,6 @@ public class MlRecommendationService {
     private final RestTemplate restTemplate;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    // можно указать URL ML-сервиса через application.yml
     @Value("${ml.service.url:http://localhost:8001/predict}")
     private String mlServiceUrl;
 
@@ -29,7 +28,6 @@ public class MlRecommendationService {
     public JsonNode getMlRecommendations(UserPreferencesRequest req) {
         Map<String, Object> body = new HashMap<>();
 
-        // --- формируем тело запроса, которое ждёт FastAPI ---
         body.put("Season", getSeason());
         body.put("Travel_budget", req.getBudget().doubleValue());
         body.put("Destination_region", req.getCountry());

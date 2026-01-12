@@ -13,6 +13,12 @@ import SavedData from '@/views/SavedData.vue'
 import Travel from "@/views/Travel.vue";
 import TripDetails from "@/views/TripDetails.vue";
 import PlaceVisitDetails from "@/views/PlaceVisitDetails.vue";
+import PageAvion from "@/views/PageAvion.vue";
+import AvionPageDetails from "@/views/AvionPageDetails.vue";
+import BookingPage from "@/views/BookingPage.vue";
+import MyFlights from "@/views/MyFlights.vue";
+import FlightBookingDetails from "@/views/FlightBookingDetails.vue";
+import SearchHotels from "@/views/SearchHotels.vue";
 
 
 
@@ -90,6 +96,43 @@ const routes = [
         path: '/trips/:tripId/places/:placeId',
         name: 'PlaceDetails',
         component: PlaceVisitDetails,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/avion',
+        name: 'PageAvion',
+        component: PageAvion,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/flights/details',
+        name: 'FlightDetails',
+        component: AvionPageDetails,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/booking/:id',
+        name: 'BookingPage',
+        component: BookingPage,
+        props: true,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/my-flights',
+        name: 'MyFlights',
+        component: MyFlights,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/my-flights/:id',
+        name: 'FlightBookingDetails',
+        component: FlightBookingDetails,
+        meta: { requiresAuth: true }
+    },
+    {
+        path: '/hotels',
+        name: 'SearchHotels',
+        component: SearchHotels,
         meta: { requiresAuth: true }
     }
 

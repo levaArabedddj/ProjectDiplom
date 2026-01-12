@@ -30,7 +30,7 @@ public class Trip {
     private BigDecimal balance;
     private CurrencyId currency;
     @Enumerated(EnumType.STRING)
-    private TripStatus status; // PLANNED, IN_PROGRESS, DONE
+    private TripStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
@@ -46,6 +46,8 @@ public class Trip {
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
     private List<PlaceCart> placesToVisit = new ArrayList<>();
 
+    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
+    private List<Note> notes = new ArrayList<>();
 
 }
 

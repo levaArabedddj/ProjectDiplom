@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.backendspring.Configuration.MyUserDetails;
 import org.example.backendspring.Dto.PlaceToVisitDto;
+import org.example.backendspring.Dto.TripDTO.NoteDto;
 import org.example.backendspring.Dto.TripDTO.TripDto;
+import org.example.backendspring.Entity.Note;
 import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Service.TripsService;
 import org.example.backendspring.ServiceApi.AmadeusClient;
@@ -21,7 +23,7 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/trips")
+@RequestMapping("/api/api/trips")
 public class TripsController {
 
     private static final String BASE_URL = "https://test.api.amadeus.com";
@@ -119,7 +121,6 @@ public class TripsController {
             @RequestBody PlaceToVisitDto dto,
             @AuthenticationPrincipal MyUserDetails currentUser) throws AccessDeniedException {
 
-        // можно дополнительно проверять, что trip принадлежит currentUser
         PlaceToVisitDto saved = tripsService.addPlaceToTrip(tripId, dto, currentUser.getUser_id());
         return ResponseEntity.ok(saved);
     }
@@ -138,5 +139,53 @@ public class TripsController {
                                            @AuthenticationPrincipal MyUserDetails user)
             throws AccessDeniedException {
         return tripsService.getPlaceDetailsForTrip(tripId, placeId, user.getUser_id());
+    }
+
+    @DeleteMapping("/{tripId}/places/{placeId}")
+    public ResponseEntity<String> deletePlaceFromTrip(@PathVariable Long tripId,  @PathVariable Long placeId,
+                                                      @AuthenticationPrincipal MyUserDetails user) throws AccessDeniedException {
+        return tripsService.deletePlace(tripId,placeId,user.getUser_id());
+    }
+
+    @PostMapping("/{tripId}/note")
+    public NoteDto createNote(@PathVariable Long tripId, @RequestBody String text) {
+        return tripsService.addNoteToTrip(tripId, text);
+    }
+
+    // 2. Отметить как выполненное (переключатель)
+    @PutMapping("/{tripId}/{noteId}/toggle")
+    public NoteDto toggleNote(@PathVariable Long noteId,@PathVariable Long tripId,
+                           @AuthenticationPrincipal MyUserDetails user) throws AccessDeniedException {
+        return tripsService.toggleNoteStatus(tripId,noteId,user.getUser_id());
+    }
+
+    // 3. Удалить заметку
+    @DeleteMapping("/{tripId}/update/{noteId}")
+    public ResponseEntity<?> deleteNote(@PathVariable Long noteId, @PathVariable Long tripId,
+                                        @AuthenticationPrincipal MyUserDetails user) throws AccessDeniedException {
+        tripsService.deleteNote(tripId,noteId,user.getUser_id());
+        return ResponseEntity.ok().build();
+    }
+
+    // 4. Получить все заметки поездки
+    @GetMapping("/{tripId}/notes")
+    public List<NoteDto> getAllNotes(@PathVariable Long tripId,
+                                  @AuthenticationPrincipal MyUserDetails user) throws AccessDeniedException {
+        return tripsService.getNotesByTripId(tripId,user.getUser_id());
+    }
+
+    @DeleteMapping("/{tripId}")
+    public ResponseEntity<?> deleteTrip(@PathVariable Long tripId,
+                           @AuthenticationPrincipal MyUserDetails user) throws AccessDeniedException {
+        tripsService.deleteTrip(tripId,user.getUser_id());
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{tripId}")
+    public ResponseEntity<TripDto> updateTrip(@PathVariable Long tripId,
+                                              @RequestBody TripDto tripDto,
+                                              @AuthenticationPrincipal MyUserDetails user) {
+        TripDto updatedTrip = tripsService.updateTrip(tripId, tripDto, user.getUser_id());
+        return ResponseEntity.ok(updatedTrip);
     }
 }

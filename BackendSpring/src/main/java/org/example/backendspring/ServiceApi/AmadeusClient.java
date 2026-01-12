@@ -168,5 +168,13 @@ public class AmadeusClient {
         String url = API_BASE + "/v3/shopping/hotel-offers/" + offerId;
         return get(url);
     }
+
+    /**
+     * Гарантированно вернуть валидный токен (обновит по необходимости).
+     */
+    public synchronized String getAccessTokenValue() {
+        ensureAuthenticated();
+        return this.accessToken;
+    }
 }
 

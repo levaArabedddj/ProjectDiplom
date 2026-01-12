@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/weather")
+@RequestMapping("/api/api/weather")
 public class WeatherController {
 
     @Value("${api_weather}")
@@ -92,7 +92,6 @@ public class WeatherController {
         }
 
         try {
-            // Если пользователь передал city — сначала получаем координаты через /weather (или geocoding)
             if (lat == null || lon == null) {
                 String geoUrl = "https://api.openweathermap.org/data/2.5/weather?q=" + city +
                         "&appid=" + API_KEY;
@@ -106,7 +105,6 @@ public class WeatherController {
                 lon = ((Number) coord.get("lon")).doubleValue();
             }
 
-            // Теперь вызываем air_pollution
             String url = "https://api.openweathermap.org/data/2.5/air_pollution?lat=" + lat + "&lon=" + lon + "&appid=" + API_KEY;
             Map<String, Object> response = restTemplate.getForObject(url, Map.class);
 

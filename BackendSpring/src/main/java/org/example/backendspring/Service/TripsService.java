@@ -4,16 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.transaction.Transactional;
+import org.example.backendspring.Configuration.MyUserDetails;
 import org.example.backendspring.Dto.PlaceToVisitDto;
-import org.example.backendspring.Dto.TripDTO.FlightDto;
-import org.example.backendspring.Dto.TripDTO.HotelDto;
+import org.example.backendspring.Dto.TripDTO.*;
 
-import org.example.backendspring.Dto.TripDTO.PlaceCartDto;
-import org.example.backendspring.Dto.TripDTO.TripDto;
-import org.example.backendspring.Entity.PlaceCart;
-import org.example.backendspring.Entity.PlaceToVisitTrips;
-import org.example.backendspring.Entity.Trip;
-import org.example.backendspring.Entity.Users;
+import org.example.backendspring.Entity.*;
 import org.example.backendspring.Enun.TripStatus;
 import org.example.backendspring.Repository.*;
 import org.example.backendspring.ServiceApi.AmadeusClient;
@@ -28,6 +23,8 @@ import org.springframework.web.util.UriUtils;
 
 import java.math.BigDecimal;
 import java.nio.file.AccessDeniedException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -48,9 +45,10 @@ public class TripsService {
     @Value("${amadeus.base-url}")
     private String baseUrl;
     private static final Logger log = LoggerFactory.getLogger(TripsService.class.getName());
+    private final NoteRepo noteRepo;
 
     @Autowired
-    public TripsService(FlightRepo flightRepo, TripsRepo tripsRepo, HotelRepo hotelRepo, PlaceCartRepo placeCartRepo, UsersRepo usersRepo, RestTemplate restTemplate, PlaceVisitRepo placeVisitRepo, AmadeusClient amadeusClient) {
+    public TripsService(FlightRepo flightRepo, TripsRepo tripsRepo, HotelRepo hotelRepo, PlaceCartRepo placeCartRepo, UsersRepo usersRepo, RestTemplate restTemplate, PlaceVisitRepo placeVisitRepo, AmadeusClient amadeusClient, NoteRepo noteRepo) {
         this.flightRepo = flightRepo;
         this.tripsRepo = tripsRepo;
         this.hotelRepo = hotelRepo;
@@ -59,8 +57,10 @@ public class TripsService {
         this.usersRepo = usersRepo;
         this.restTemplate = restTemplate;
         this.amadeusClient = amadeusClient;
+        this.noteRepo = noteRepo;
     }
 
+    // 1. Создание поездки
     @Transactional
     public void createTrip(TripDto trip, Long userId) {
         Users users = usersRepo.findById(userId).
@@ -77,20 +77,8 @@ public class TripsService {
     }
 
 
-//    public void updateBalanceTrip(Long tripId, TripDto trip, Long userId) {
-//
-//       //List<Trip> trip1 =  tripsRepo.findByUserUser_id(userId);
-//
-//       if(trip1.isEmpty()){
-//           new Exception("Trip not found");
-//       }
-//
-//       Trip trip2 = new Trip();
-//       trip2.setBalance(trip.getBalance());
-//       trip2.setCurrency(trip.getCurrency());
-//       tripsRepo.save(trip2);
-//    }
 
+    // 2. Получить данные путешествия по ее идентификатору
     public TripDto getTripById(Long userId,Long tripId) {
 
         Users user = usersRepo.findById(userId)
@@ -111,6 +99,7 @@ public class TripsService {
                 .startDate(trip.getStartDate())
                 .endDate(trip.getEndDate())
                 .balance(trip.getBalance())
+                .currency(trip.getCurrency())
                 .flights(trip.getFlights().stream()
                         .map(f -> new FlightDto(f.getId(), f.getFromAirport(), f.getToAirport(), f.getDepartureTime(),f.getArrivalTime(),f.getAirline(),f.getFlightNumber(),f.getPrice(),f.getCurrency(),f.getBookingUrl()))
                         .toList())
@@ -123,6 +112,7 @@ public class TripsService {
                 .build();
     }
 
+    // 3. получить данные интересных мест
     public JsonNode getPlaces(String city) {
         try {
             double lat = 0;
@@ -139,7 +129,7 @@ public class TripsService {
 
             if (!dataArray.isEmpty()) {
                 lat = dataArray.get(0).path("geoCode").path("latitude").asDouble();
-                lon = dataArray.get(0).path("longitude").asDouble();
+                lon = dataArray.get(0).path("geoCode").path("longitude").asDouble();
                 coordinatesFound = true;
             } else {
                 //  Если Amadeus не нашел город, используем OpenStreetMap (Nominatim)
@@ -178,40 +168,9 @@ public class TripsService {
     }
 
 
-    // сохранение места которое понравилось юзеру с єтих мест
-//    public PlaceToVisitDto savePlaceToTrip(Long tripId, PlaceToVisitDto dto) {
-//        Trip trip = tripsRepo.findById(tripId)
-//                .orElseThrow(() -> new RuntimeException("Trip not found: " + tripId));
-//
-//        PlaceToVisitTrips place = PlaceToVisitTrips.builder()
-//                .amadeusId(dto.getAmadeusId())
-//                .name(dto.getName())
-//                .latitude(dto.getLatitude())
-//                .longitude(dto.getLongitude())
-//                .price(dto.getPrice())
-//                .currency(dto.getCurrency())
-//                .pictureUrl(dto.getPictureUrl())
-//                .bookingLink(dto.getBookingLink())
-//                .isFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : false)
-//                .trip(trip)
-//                .build();
-//
-//        place = placeVisitRepo.save(place);
-//
-//        return PlaceToVisitDto.builder()
-//                .amadeusId(place.getAmadeusId())
-//                .name(place.getName())
-//                .latitude(place.getLatitude())
-//                .longitude(place.getLongitude())
-//                .price(place.getPrice())
-//                .currency(place.getCurrency())
-//                .pictureUrl(place.getPictureUrl())
-//                .bookingLink(place.getBookingLink())
-//                .isFavorite(place.getIsFavorite())
-//                .build();
-//    }
 
 
+    // 4. получить все поездки нашего юзера
     public List<TripDto> getAllTrips(Long userId) {
         List<Trip> tripList = tripsRepo.findAllByUserId(userId);
         return tripList.stream().
@@ -223,6 +182,7 @@ public class TripsService {
         ).collect(Collectors.toList());
     }
 
+    // 5. добавить интересное место в эту поездку
     @Transactional
     public PlaceToVisitDto addPlaceToTrip(Long tripId, PlaceToVisitDto dto, Long userId) throws AccessDeniedException {
         Trip trip = tripsRepo.findById(tripId)
@@ -240,8 +200,7 @@ public class TripsService {
         entity.setLongitude(dto.getLongitude());
         entity.setPrice(dto.getPrice() != null ? dto.getPrice().doubleValue() : null);
         entity.setCurrency(dto.getCurrency());
-        entity.setPictureUrl(dto.getPictureUrl());
-        entity.setBookingLink(dto.getBookingLink());
+        entity.setPictureUrls(dto.getPictureUrls() != null ? dto.getPictureUrls() : new ArrayList<>());        entity.setBookingLink(dto.getBookingLink());
         entity.setIsFavorite(dto.getIsFavorite() != null ? dto.getIsFavorite() : Boolean.TRUE);
         entity.setTrip(trip);
 
@@ -256,12 +215,13 @@ public class TripsService {
                 .longitude(saved.getLongitude())
                 .price(saved.getPrice() != null ? BigDecimal.valueOf(saved.getPrice()) : null)
                 .currency(saved.getCurrency())
-                .pictureUrl(saved.getPictureUrl())
+                .pictureUrls(saved.getPictureUrls())
                 .bookingLink(saved.getBookingLink())
                 .isFavorite(saved.getIsFavorite())
                 .build();
     }
 
+    // 6. получить все интересные места нашего юзера (кратко)
     public List<PlaceToVisitDto> getPlacesForTrip(Long tripId, Long userId) throws AccessDeniedException {
         Trip trip = tripsRepo.findById(tripId)
                 .orElseThrow(() -> new RuntimeException("Trip not found: " + tripId));
@@ -277,6 +237,7 @@ public class TripsService {
                 .collect(Collectors.toList());
     }
 
+    // 7. получить все детали одного интересного места
     public PlaceToVisitDto getPlaceDetailsForTrip(Long tripId, Long placeId, Long userId)
             throws AccessDeniedException {
 
@@ -297,16 +258,170 @@ public class TripsService {
         return PlaceToVisitDto.builder()
                 .id(place.getId())
                 .amadeusId(place.getAmadeusId())
-                .name(place.getName())
+                .name(place.getName() != null ? place.getName() : "Без назви")
                 .latitude(place.getLatitude())
                 .longitude(place.getLongitude())
-                .price(BigDecimal.valueOf(place.getPrice()))
-                .currency(place.getCurrency())
-                .pictureUrl(place.getPictureUrl())
+                .price(place.getPrice() != null ? BigDecimal.valueOf(place.getPrice()) : null)
+                .currency(place.getCurrency() != null ? place.getCurrency() : "")
+                .pictureUrls(place.getPictureUrls() != null ? place.getPictureUrls() : new ArrayList<>())
                 .bookingLink(place.getBookingLink())
-                .isFavorite(place.getIsFavorite())
+                .isFavorite(place.getIsFavorite() != null && place.getIsFavorite())
                 .build();
     }
 
+    // 8. удалить интересное место
+    @Transactional
+    public ResponseEntity<String> deletePlace(Long tripId, Long placeId, Long userId) throws AccessDeniedException {
 
+        PlaceToVisitTrips place = placeVisitRepo.findById(placeId)
+                .orElseThrow(() -> new RuntimeException("Place not found in DB"));
+
+
+        if (!place.getTrip().getId().equals(tripId)) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body("Place exists, but belongs to another trip");
+        }
+
+        // Проверяем права пользователя (принадлежит ли поездка юзеру)
+        if (!place.getTrip().getUser().getUser_id().equals(userId)) {
+            throw new AccessDeniedException("You do not have permission to delete this place");
+        }
+
+
+        placeVisitRepo.delete(place);
+
+        return ResponseEntity.ok("Place deleted successfully");
+    }
+
+    // 9. Получить все заметки (с проверкой существования поездки)
+    public List<NoteDto> getNotesByTripId(Long tripId, Long userId) throws AccessDeniedException {
+        Trip trip = tripsRepo.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found"));
+
+        if (!trip.getUser().getUser_id().equals(userId)) {
+            throw new AccessDeniedException("Ви не маєте доступу до нотаток цієї поїздки");
+        }
+
+        return noteRepo.findAllByTripIdOrderByCreatedAtDesc(tripId).
+                stream()
+                .map(NoteDto::fromEntity).
+                collect(Collectors.toList());
+    }
+
+    // 10. Добавить новую заметку
+    public NoteDto addNoteToTrip(Long tripId, String text) {
+        Trip trip = tripsRepo.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found"));
+
+        Note note = Note.builder()
+                .text(text)
+                .completed(false)
+                .createdAt(LocalDateTime.now())
+                .trip(trip)
+                .build();
+        Note noteSaved = noteRepo.save(note);
+        return NoteDto.fromEntity(noteSaved);
+    }
+
+    // 11. Переключить статус (выполнено / не выполнено)
+    public NoteDto toggleNoteStatus(Long tripId, Long noteId, Long userId)
+            throws AccessDeniedException {
+
+        // Сначала находим поездку и проверяем владельца
+        Trip trip = tripsRepo.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found"));
+
+        if (!trip.getUser().getUser_id().equals(userId)) {
+            throw new AccessDeniedException("Ви не имеете доступа к этой поездке");
+        }
+
+        // Находим заметку и проверяем, принадлежит ли она именно этой поездке
+        Note note = noteRepo.findById(noteId)
+                .orElseThrow(() -> new RuntimeException("Note not found"));
+
+        if (!note.getTrip().getId().equals(tripId)) {
+            throw new RuntimeException("Эта заметка не относится к указанной поездке");
+        }
+
+        note.setCompleted(!note.isCompleted());
+        Note updatedNote = noteRepo.save(note);
+
+        return NoteDto.fromEntity(updatedNote);    }
+
+    // 12. Удалить заметку
+    public void deleteNote(Long tripId, Long noteId, Long userId)
+            throws AccessDeniedException {
+
+        Trip trip = tripsRepo.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found"));
+
+        if (!trip.getUser().getUser_id().equals(userId)) {
+            throw new AccessDeniedException("Ви не имеете доступа к этой поездке");
+        }
+
+        Note note = noteRepo.findById(noteId)
+                .orElseThrow(() -> new RuntimeException("Note not found"));
+
+        if (!note.getTrip().getId().equals(tripId)) {
+            throw new RuntimeException("Заметка не принадлежит этой поездке");
+        }
+
+        noteRepo.delete(note);
+    }
+    // 13. Удалить поездку
+    public void deleteTrip(Long tripId, Long userId) throws AccessDeniedException {
+        Trip trip = tripsRepo.findById(tripId).orElseThrow(() -> new RuntimeException("Trip not found"));
+        if (!trip.getUser().getUser_id().equals(userId)) {
+            throw new AccessDeniedException("Ви немаєте право доступа до цієї подорожі");
+        }
+        tripsRepo.deleteById(tripId);
+    }
+
+    // 14. обновить данные поездки
+    @Transactional
+    public TripDto updateTrip(Long tripId, TripDto tripDto, Long userId) {
+        // 1. Ищем поездку
+        Trip trip = tripsRepo.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Поездка не найдена"));
+
+        // 2. Проверяем, принадлежит ли она текущему юзеру (безопасность)
+        if (!trip.getUser().getUser_id().equals(userId)) {
+            throw new RuntimeException("У вас нет прав на редактирование этой поездки");
+        }
+
+        // 3. Обновляем поля, если они пришли (не null)
+        if (tripDto.getCityName() != null) {
+            trip.setCityName(tripDto.getCityName());
+        }
+        if (tripDto.getStartDate() != null) {
+            trip.setStartDate(tripDto.getStartDate());
+        }
+        if (tripDto.getEndDate() != null) {
+            trip.setEndDate(tripDto.getEndDate());
+        }
+        if (tripDto.getBalance() != null) {
+            trip.setBalance(tripDto.getBalance());
+        }
+        if (tripDto.getCurrency() != null) {
+            trip.setCurrency(tripDto.getCurrency());
+        }
+        if (tripDto.getStatus() != null) {
+            trip.setStatus(tripDto.getStatus());
+        }
+
+        // 4. Сохраняем изменения
+        Trip savedTrip = tripsRepo.save(trip);
+
+        // 5. Возвращаем обновленные данные (можно переиспользовать существующий маппер или билдер)
+        return TripDto.builder()
+                .id(savedTrip.getId())
+                .cityName(savedTrip.getCityName())
+                .startDate(savedTrip.getStartDate())
+                .endDate(savedTrip.getEndDate())
+                .balance(savedTrip.getBalance())
+                .currency(savedTrip.getCurrency())
+                .status(savedTrip.getStatus())
+                .build();
+    }
 }

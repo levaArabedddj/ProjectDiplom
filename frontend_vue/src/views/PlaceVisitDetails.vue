@@ -17,35 +17,49 @@
           <div v-if="place.price" class="price-tag">
             💰 {{ place.price }} {{ place.currency }}
           </div>
+          <div v-else class="price-tag free">
+            🌿 Безкоштовно
+          </div>
         </div>
 
         <div class="content-grid">
-          <div class="image-wrapper" v-if="place.pictureUrl">
-            <img :src="place.pictureUrl" class="place-image" alt="Place photo" />
+          <div class="photos-column" v-if="place.pictureUrls && place.pictureUrls.length > 0">
+            <img
+                v-for="(url, index) in place.pictureUrls"
+                :key="index"
+                :src="url"
+                class="vertical-photo"
+                alt="Place photo"
+            />
+          </div>
+          <div class="photos-column" v-else>
+            <div class="no-photo">📸 Немає доступних фото</div>
           </div>
 
-          <div class="info-block">
-            <div class="info-item" v-if="place.latitude && place.longitude">
-              <h3>📍 Локація</h3>
-              <p>{{ place.latitude }}, {{ place.longitude }}</p>
-              <a
-                  :href="`https://www.google.com/maps/search/?api=1&query=${place.latitude},${place.longitude}`"
-                  target="_blank"
-                  class="map-link"
-              >
-                Показати на карті →
-              </a>
-            </div>
+          <div class="sticky-info">
+            <div class="info-block glass-card-inner">
+              <div class="info-item" v-if="place.latitude && place.longitude">
+                <h3>📍 Локація</h3>
+                <p>{{ place.latitude }}, {{ place.longitude }}</p>
+                <a
+                    :href="`https://www.google.com/maps?q=${place.latitude},${place.longitude}`"
+                    target="_blank"
+                    class="map-link"
+                >
+                  Показати на карті →
+                </a>
+              </div>
 
-            <div class="info-item" v-if="place.description">
-              <h3>📝 Опис</h3>
-              <p>{{ place.description }}</p>
-            </div>
+              <div class="info-item" v-if="place.description">
+                <h3>📝 Опис</h3>
+                <div class="description-text" v-html="place.description"></div>
+              </div>
 
-            <div class="action-area" v-if="place.bookingLink">
-              <a :href="place.bookingLink" target="_blank" class="book-btn">
-                🔗 Перейти до бронювання
-              </a>
+              <div class="action-area" v-if="place.bookingLink">
+                <a :href="place.bookingLink" target="_blank" class="book-btn">
+                  🔗 Перейти до бронювання
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -83,8 +97,8 @@ onMounted(async () => {
   }
 })
 </script>
-
 <style scoped>
+/* 1. Базовая настройка страницы */
 .place-page {
   width: 100%;
   min-height: 100vh;
@@ -100,6 +114,7 @@ onMounted(async () => {
   margin: 0 auto;
 }
 
+/* 2. Кнопка "Назад" */
 .back-btn {
   background: rgba(255,255,255,0.1);
   border: 1px solid rgba(255,255,255,0.3);
@@ -117,6 +132,7 @@ onMounted(async () => {
   transform: translateX(-5px);
 }
 
+/* 3. Основная карточка (Стекло) */
 .glass-card {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(15px);
@@ -153,42 +169,63 @@ onMounted(async () => {
   box-shadow: 0 4px 12px rgba(74, 222, 128, 0.3);
 }
 
-
+/* 4. Сетка контента (Исправлено!) */
 .content-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: 30px;
+  align-items: start;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 850px) {
   .content-grid {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1.2fr 0.8fr; /* Фото слева, инфо справа */
   }
 }
 
-.image-wrapper {
-  width: 100%;
-  height: 300px;
-  border-radius: 16px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.1);
+/* 5. Колонки фото */
+.photos-column {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.place-image {
+.vertical-photo {
   width: 100%;
-  height: 100%;
+  border-radius: 18px;
   object-fit: cover;
-  transition: transform 0.5s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+  transition: transform 0.3s ease;
 }
 
-.place-image:hover {
-  transform: scale(1.05);
+.vertical-photo:hover {
+  transform: translateY(-5px);
 }
 
+/* 6. Правая колонка с информацией (Sticky эффект) */
+.sticky-info {
+  position: relative;
+}
+
+@media (min-width: 850px) {
+  .sticky-info {
+    position: sticky;
+    top: 40px;
+  }
+}
+
+.glass-card-inner {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 25px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* 7. Текстовые блоки */
 .info-block {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   gap: 20px;
 }
 
@@ -200,10 +237,10 @@ onMounted(async () => {
   letter-spacing: 1px;
 }
 
-.info-item p {
-  margin: 0;
-  font-size: 1.1rem;
-  line-height: 1.5;
+.description-text {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .map-link {
@@ -211,45 +248,48 @@ onMounted(async () => {
   font-size: 0.9rem;
   text-decoration: none;
   border-bottom: 1px dashed #646cff;
-  margin-top: 5px;
   display: inline-block;
 }
-.map-link:hover { color: #8ea2ff; border-color: #8ea2ff; }
 
-.action-area {
-  margin-top: auto;
-  padding-top: 20px;
-}
-
+/* 8. Кнопка бронирования */
 .book-btn {
-  display: inline-block;
-  width: 100%;
+  display: block;
+  padding: 14px;
+  border-radius: 12px;
   text-align: center;
   background: #646cff;
   color: white;
-  padding: 14px;
-  border-radius: 12px;
   text-decoration: none;
   font-weight: 600;
   transition: background 0.3s;
-  box-sizing: border-box;
 }
+
+
 
 .book-btn:hover {
   background: #535bf2;
   box-shadow: 0 0 15px rgba(100, 108, 255, 0.5);
 }
 
+/* 9. Вспомогательные стили */
+.no-photo {
+  height: 300px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.4);
+  border: 2px dashed rgba(255,255,255,0.1);
+}
+
 .state-msg {
   text-align: center;
-  font-size: 1.2rem;
   padding: 40px;
 }
-.error { color: #ff8c8c; border-color: rgba(255, 70, 70, 0.3); }
 
 @media (max-width: 600px) {
   .place-page { padding: 20px 15px; }
   .card-header h1 { font-size: 1.8rem; }
-  .image-wrapper { height: 200px; }
 }
 </style>

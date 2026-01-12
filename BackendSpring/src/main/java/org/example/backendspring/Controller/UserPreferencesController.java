@@ -31,7 +31,7 @@ import java.util.concurrent.CompletableFuture;
 
 
 @RestController
-@RequestMapping("/api/preferences")
+@RequestMapping("/api/api/preferences")
 public class UserPreferencesController {
 
     @Autowired

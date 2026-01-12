@@ -2,6 +2,7 @@ package org.example.backendspring.Dto.TripDTO;
 
 import lombok.*;
 import org.example.backendspring.Enun.CurrencyId;
+import org.example.backendspring.Enun.TripStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,7 +19,7 @@ public class TripDto {
     private LocalDate endDate;
     private BigDecimal balance;
     private CurrencyId currency;
-
+    private TripStatus status; // <-- Добавили поле статуса
     private List<FlightDto> flights;
     private List<HotelDto> hotels;
     private List<PlaceCartDto> placesToVisit;

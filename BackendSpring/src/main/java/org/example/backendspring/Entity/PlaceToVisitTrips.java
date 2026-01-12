@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Data
 @AllArgsConstructor
@@ -17,13 +20,18 @@ public class PlaceToVisitTrips {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String amadeusId;   // id из Amadeus API
+    private String amadeusId;
     private String name;
     private Double latitude;
     private Double longitude;
     private Double price;
     private String currency;
-    private String pictureUrl;
+   // private String pictureUrl;
+   @ElementCollection
+   @CollectionTable(name = "place_photos", joinColumns = @JoinColumn(name = "place_id"))
+   @Column(name = "photo_url", length = 2048)
+   @Builder.Default
+   private List<String> pictureUrls = new ArrayList<>();
     private String bookingLink;
     private Boolean isFavorite = false;
 

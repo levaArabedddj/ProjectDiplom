@@ -4,6 +4,7 @@ import lombok.Data;
 
 @Data
 public class FlightResponse {
+    private String id;
     private String airline;
     private String flightNumber;
     private String departureAirport;

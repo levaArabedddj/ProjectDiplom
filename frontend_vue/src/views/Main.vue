@@ -13,10 +13,19 @@
           <span>🤖</span>
           <p>Інтелектуальні пропозиції</p>
         </div>
-        <div class="tile">
+        <div class="tile" @click="openSearchSelection">
           🔍
           <p>Пошук рейсів / готелів</p>
         </div>
+        <div class="tile highlight-tile" @click="router.push('/my-flights')">
+          <span>✈️</span>
+          <p>Ваші рейси</p>
+        </div>
+
+        <SearchSelectionModal
+            v-if="showSearchSelection"
+            @close="showSearchSelection = false"
+        />
 
         <div class="tile" @click="$router.push('/saved')">
           <span>💾</span>
@@ -62,6 +71,7 @@
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
 import CreateTripModal from '@/components/CreateTripModal.vue'
+import SearchSelectionModal from '@/components/SearchSelectionModal.vue'
 
 const showCreateTrip = ref(false)
 
@@ -75,6 +85,12 @@ function goToCompare() {
   router.push('/compare')
 }
 
+const showSearchSelection = ref(false)
+
+
+function openSearchSelection() {
+  showSearchSelection.value = true
+}
 
 </script>
 
@@ -222,6 +238,7 @@ function goToCompare() {
     margin: 0 auto;
   }
 }
+
 
 
 </style>

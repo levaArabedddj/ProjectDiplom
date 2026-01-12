@@ -6,8 +6,16 @@
         <div class="header-left">
           <button @click="$router.push('/travel')" class="back-btn">←</button>
           <div>
-            <h1>{{ trip.cityName }}</h1>
-            <p class="date-badge">📅 {{ formatDate(trip.startDate) }} — {{ formatDate(trip.endDate) }}</p>
+            <div class="title-with-edit">
+              <h1>{{ trip.cityName }}</h1>
+              <button class="main-edit-btn" @click="openEditModal" title="Редагувати подорож">✏️</button>
+            </div>
+            <div class="subtitle-row">
+              <p class="date-badge">📅 {{ formatDate(trip.startDate) }} — {{ formatDate(trip.endDate) }}</p>
+              <span :class="['status-badge', trip.status === 'DONE' ? 'done' : 'planned']">
+          {{ trip.status === 'DONE' ? '✅ Завершено' : '⏳ Планується' }}
+       </span>
+            </div>
           </div>
         </div>
 
@@ -15,7 +23,7 @@
           <div class="budget-widget">
             <span class="label">Бюджет:</span>
             <span class="amount">{{ trip.balance || 0 }} {{ trip.currency || '' }}</span>
-            <button class="edit-btn">✏️</button>
+            <button class="main-edit-btn" @click="openEditModal">✏️</button>
           </div>
         </div>
       </header>
@@ -26,7 +34,51 @@
           <div class="glass-card menu-card">
             <h3>Меню подорожі</h3>
             <ul>
-              <li>📝 Нотатки</li>
+              <li @click="toggleNotes" :class="{ active: showNotes }" class="menu-item">
+                <span>📝 Нотатки</span>
+                <span class="arrow">{{ showNotes ? '▼' : '▶' }}</span>
+              </li>
+
+              <transition name="slide">
+                <div v-if="showNotes" class="notes-container">
+                  <div class="add-note-wrapper">
+                    <input
+                        v-model="newNoteText"
+                        placeholder="Нове завдання..."
+                        @keyup.enter="addNote"
+                        class="note-input"
+                    />
+                    <button @click="addNote" :disabled="!newNoteText.trim()" class="btn-add-note">
+                      +
+                    </button>
+                  </div>
+
+                  <ul class="notes-list">
+                    <li v-for="note in notes" :key="note.id" class="note-card">
+                      <label class="custom-checkbox">
+                        <input
+                            type="checkbox"
+                            :checked="note.completed"
+                            @change="toggleNote(note)"
+                        />
+                        <span class="checkmark"></span>
+                      </label>
+
+                      <span class="note-text" :class="{ 'completed-text': note.completed }">
+          {{ note.text }}
+        </span>
+
+                      <button class="btn-delete-note" @click="deleteNote(note.id)" title="Видалити">
+                        🗑️
+                      </button>
+                    </li>
+
+                    <li v-if="notes.length === 0" class="empty-notes">
+                      Список порожній 🍃
+                    </li>
+                  </ul>
+                </div>
+              </transition>
               <li>🧳 Чек-лист речей</li>
               <li>🏨 Знайти готель</li>
               <li>🎫 Купити квитки</li>
@@ -114,11 +166,7 @@
             </div>
 
             <ul v-if="showPlaces && !loadingPlaces && tripPlaces.length" class="simple-places-list">
-              <li
-                  v-for="p in tripPlaces"
-                  :key="p.id"
-                  class="place-mini-card"
-              >
+              <li v-for="p in tripPlaces" :key="p.id" class="place-mini-card">
                 <div class="place-header">
                   <h4>{{ p.name }}</h4>
                 </div>
@@ -126,6 +174,10 @@
                 <div class="place-actions">
                   <button class="btn-small" @click="goToPlaceDetails(p.id)">
                     Деталі →
+                  </button>
+
+                  <button class="btn-icon delete" @click="confirmDeletePlace(p)" title="Видалити місце">
+                    🗑️
                   </button>
                 </div>
               </li>
@@ -149,6 +201,25 @@
                 @close="showPlacesFinder = false"
                 @added="handlePlaceAddedFromFinder"
             />
+
+            <div v-if="showDeleteModal" class="modal-overlay" @click.self="cancelDelete">
+              <div class="modal-confirm glass-card">
+                <h3>Видалити це місце? 🗑️</h3>
+                <p>
+                  Ви впевнені, що хочете прибрати <strong>{{ placeToDelete?.name }}</strong> зі свого маршруту?
+                  <br>Цю дію не можна скасувати.
+                </p>
+
+                <div class="confirm-actions">
+                  <button class="btn-secondary" @click="cancelDelete">
+                    Ні, залишити
+                  </button>
+                  <button class="btn-danger" @click="deletePlace" :disabled="isDeleting">
+                    {{ isDeleting ? 'Видалення...' : 'Так, видалити' }}
+                  </button>
+                </div>
+              </div>
+            </div>
           </section>
 
 
@@ -226,6 +297,50 @@
             <div v-else class="center muted">Информация о погоде не доступна для выбранного дня.</div>
           </section>
         </aside>
+      </div>
+    </div>
+  </div>
+  <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
+    <div class="modal-form glass-card">
+      <h2>✏️ Редагувати подорож</h2>
+
+      <div class="form-group">
+        <label>Бюджет</label>
+        <input v-model.number="editForm.balance" type="number" placeholder="Сума">
+      </div>
+
+      <div class="form-group">
+        <label>Валюта</label>
+        <select v-model="editForm.currency">
+          <option value="USD">USD ($)</option>
+          <option value="EUR">EUR (€)</option>
+          <option value="UAH">UAH (₴)</option>
+        </select>
+      </div>
+
+      <div class="form-group-row">
+        <div class="form-group">
+          <label>Початок</label>
+          <input v-model="editForm.startDate" type="date">
+        </div>
+        <div class="form-group">
+          <label>Кінець</label>
+          <input v-model="editForm.endDate" type="date">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Статус</label>
+        <select v-model="editForm.status">
+          <option value="PLANNED">⏳ Планується</option>
+          <option value="IN_PROGRESS">🚀 В процесі</option>
+          <option value="DONE">✅ Завершено</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-secondary" @click="closeEditModal">Скасувати</button>
+        <button class="btn-primary" @click="saveTripChanges">Зберегти</button>
       </div>
     </div>
   </div>
@@ -341,8 +456,6 @@
   await fetchWeather(trip.value.cityName, day)
 }
 
-
-
   onMounted(async () => {
   await fetchTrip()
   if (trip.value.cityName) {
@@ -353,9 +466,138 @@
   // маленькие утилиты
   function formatDate(d) { return d ? new Date(d).toLocaleDateString('uk-UA') : '—' }
   function formatTime(d) { return d ? new Date(d).toLocaleTimeString('uk-UA', {hour: '2-digit', minute:'2-digit'}) : '--:--' }
+
+  const showDeleteModal = ref(false)
+  const placeToDelete = ref(null)
+  const isDeleting = ref(false)
+
+  function confirmDeletePlace(place) {
+    placeToDelete.value = place
+    showDeleteModal.value = true
+  }
+
+  function cancelDelete() {
+    showDeleteModal.value = false
+    placeToDelete.value = null
+  }
+
+  async function deletePlace() {
+    if (!placeToDelete.value) return
+
+    isDeleting.value = true
+    try {
+      const tripId = trip.value.id
+      const placeId = placeToDelete.value.id
+
+      await api.delete(`/api/trips/${tripId}/places/${placeId}`)
+
+      tripPlaces.value = tripPlaces.value.filter(p => p.id !== placeId)
+
+      cancelDelete()
+    } catch (error) {
+      console.error('Помилка видалення:', error)
+      alert('Щось пішло не так при видаленні :(')
+    } finally {
+      isDeleting.value = false
+    }
+  }
+
+  const showNotes = ref(false)
+  const notes = ref([])
+  const newNoteText = ref('')
+
+  async function toggleNotes() {
+    showNotes.value = !showNotes.value
+    if (showNotes.value) {
+      await loadNotes()
+    }
+  }
+
+  async function loadNotes() {
+    try {
+      const res = await api.get(`/api/trips/${trip.value.id}/notes`)
+      notes.value = res.data
+    } catch (e) {
+      console.error("Ошибка загрузки заметок", e)
+    }
+  }
+
+  async function addNote() {
+    if (!newNoteText.value.trim()) return
+    try {
+      const res = await api.post(`/api/trips/${trip.value.id}/note`, newNoteText.value, {
+        headers: { 'Content-Type': 'text/plain' }
+      })
+      notes.value.unshift(res.data)
+      newNoteText.value = ''
+    } catch (e) {
+      console.error("Ошибка добавления", e)
+    }
+  }
+
+
+  async function toggleNote(note) {
+    try {
+      await api.put(`/api/trips/${trip.value.id}/${note.id}/toggle`)
+      note.completed = !note.completed
+    } catch (e) {
+      console.error("Ошибка статуса", e)
+    }
+  }
+
+
+  async function deleteNote(noteId) {
+    try {
+      await api.delete(`/api/trips/${trip.value.id}/update/${noteId}`)
+      notes.value = notes.value.filter(n => n.id !== noteId)
+    } catch (e) {
+      console.error("Ошибка удаления", e)
+    }
+  }
+
+  const showEditModal = ref(false)
+  const editForm = ref({
+    balance: 0,
+    currency: 'USD',
+    startDate: '',
+    endDate: '',
+    status: 'PLANNED'
+  })
+
+  const openEditModal = () => {
+    editForm.value = {
+      balance: trip.value.balance,
+      currency: trip.value.currency,
+      startDate: trip.value.startDate,
+      endDate: trip.value.endDate,
+      status: trip.value.status || 'PLANNED'
+    }
+    showEditModal.value = true
+  }
+
+  const closeEditModal = () => {
+    showEditModal.value = false
+  }
+
+  const saveTripChanges = async () => {
+    try {
+      const id = trip.value.id
+
+      if (!id) {
+        alert('Помилка: ID подорожі не знайдено')
+        return
+      }
+
+      const res = await api.put(`/api/trips/${id}`, editForm.value)
+
+      trip.value = res.data
+      closeEditModal()
+    } catch (e) {
+      alert('Не вдалося оновити дані подорожі')
+      console.error(e)
+    }
+  }
 </script>
-
-
 <style scoped>
 
 .ww-header {
@@ -425,7 +667,7 @@
 .back-btn:hover { background: rgba(255,255,255,0.2); }
 .header-right { display: flex; gap: 20px; }
 
-.budget-widget, .weather-widget {
+.weather-widget {
   background: rgba(0,0,0,0.2);
   padding: 10px 20px;
   border-radius: 12px;
@@ -491,9 +733,7 @@
   border-radius: 10px;
   margin-bottom: 10px;
 }
-.category-tag { font-size: 0.65rem; background: #646cff; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; }
 .place-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
-.place-desc { font-size: 0.85rem; opacity: 0.7; margin: 0; }
 
 .btn-action {
   width: 100%;
@@ -603,4 +843,418 @@
 .place-mini-card { padding:10px; border-radius:8px; background: rgba(255,255,255,0.02); margin-bottom:8px; }
 .actions-row { margin-top:10px; }
 
+.place-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-icon.delete {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 99, 99, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon.delete:hover {
+  background: rgba(255, 70, 70, 0.2);
+  border-color: rgba(255, 70, 70, 0.6);
+  transform: scale(1.05);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.modal-confirm {
+  background: #1e293b;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 32px;
+  border-radius: 20px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  color: #fff;
+  animation: slideUp 0.3s ease-out;
+}
+
+.modal-confirm h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  color: #ff6b6b;
+}
+
+.modal-confirm p {
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 24px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.btn-secondary {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.btn-secondary:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.btn-danger {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: none;
+  background: #ff4757;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.btn-danger:hover {
+  background: #ff6b81;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+}
+.btn-danger:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.menu-item {
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+
+.add-note input {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 5px;
+  padding: 5px;
+  flex: 1;
+  font-size: 0.8rem;
+}
+
+
+.completed-text {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+.btn-delete-note {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #ff4757;
+  cursor: pointer;
+}
+.notes-container {
+  margin-top: 15px;
+  margin-bottom: 15px;
+  padding: 0 5px;
+}
+
+.add-note-wrapper {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.note-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  transition: 0.2s;
+}
+
+.note-input:focus {
+  outline: none;
+  border-color: #646cff;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.btn-add-note {
+  background: #646cff;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  width: 36px;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s;
+}
+
+.btn-add-note:hover:not(:disabled) {
+  background: #535bf2;
+}
+
+.btn-add-note:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  cursor: not-allowed;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.notes-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+
+.note-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.note-card:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.note-text {
+  flex: 1;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  word-break: break-word;
+  padding-top: 1px;
+}
+
+.completed-text {
+  text-decoration: line-through;
+  opacity: 0.5;
+  color: #9ca3af;
+}
+
+.btn-delete-note {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  opacity: 0.4;
+  padding: 2px;
+  transition: 0.2s;
+  margin-top: -2px;
+}
+
+.btn-delete-note:hover {
+  opacity: 1;
+  color: #ff4757;
+  transform: scale(1.1);
+}
+
+/* Чекбокс */
+.custom-checkbox {
+  display: flex;
+  align-items: center;
+  padding-top: 2px;
+}
+
+.custom-checkbox input {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  accent-color: #646cff;
+}
+
+
+.empty-notes {
+  text-align: center;
+  font-size: 0.85rem;
+  opacity: 0.5;
+  padding: 10px 0;
+  font-style: italic;
+}
+
+/* Бейдж статуса */
+.subtitle-row {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.status-badge {
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.planned {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.4);
+}
+
+.status-badge.done {
+  background: #4ade80;
+  color: #0f2027;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.4);
+}
+
+/* Модальное окно формы */
+.modal-form {
+  background: #1e293b; /* Темный фон, чтобы текст читался */
+  color: white;
+  padding: 30px;
+  width: 90%;
+  max-width: 400px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group-row {
+  display: flex;
+  gap: 15px;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.modal-form input,
+.modal-form select {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 10px;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+}
+
+.modal-form input:focus,
+.modal-form select:focus {
+  outline: none;
+  border-color: #646cff;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-primary {
+  background: #646cff;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #ccc;
+  padding: 10px 20px;
+  border: 1px solid #555;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.title-with-edit {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.main-edit-btn {
+  background: rgba(255, 255, 255, 0.1); /* Прозрачный фон как у первой кнопки */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.main-edit-btn:hover {
+  background: #646cff;
+  border-color: #646cff;
+  transform: scale(1.1);
+  box-shadow: 0 0 15px rgba(100, 108, 255, 0.4);
+}
+
+.budget-widget {
+  background: rgba(0,0,0,0.25);
+  padding: 10px 15px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.05);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Изменено с flex-end на center для центровки */
+  gap: 8px;            /* Добавляет отступ между текстом и кнопкой */
+  min-width: 100px;    /* Немного увеличим для красоты */
+}
 </style>

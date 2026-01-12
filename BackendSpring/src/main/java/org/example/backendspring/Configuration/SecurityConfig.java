@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -59,8 +60,8 @@ public class SecurityConfig {
     private OAuth2AuthorizedClientService authorizedClientService;
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
-    @Value("${GOOGLE_APPLICATION_CREDENTIALS1}")
-    String password;
+//    @Value("${GOOGLE_APPLICATION_CREDENTIALS1}")
+//    String password;
 
     @Autowired
     public SecurityConfig(MyUserDetailsService userService, TokenFilter authTokenFilter, MyUserDetailsService uds) {
@@ -105,7 +106,8 @@ public class SecurityConfig {
     @Bean
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of("http://localhost:5173")); // Разрешённый Origin
+        corsConfig.setAllowedOrigins(List.of("http://localhost:5173","https://localhost")); // Разрешённый Origin
+        corsConfig.setAllowedOriginPatterns(List.of("http://localhost:*", "https://localhost:*", "https://*.trycloudflare.com", "https://stadium-motivation-postcards-nodes.trycloudflare.com", "https://levchatproject.duckdns.org","https://triplevad.duckdns.org"));
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         corsConfig.setAllowCredentials(true);
@@ -130,8 +132,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(authorizeRequests ->authorizeRequests
-                        .requestMatchers("/auth/**","/oauth2/**", "/login/oauth2/**",
-                                "/oauth2/authorization/**","/actuator", "/auth/signup-Login").permitAll()
+                        .requestMatchers("/auth/**", "/api/auth/**","/oauth2/**", "/login/oauth2/**",
+                                "/oauth2/authorization/**", "/actuator", "/auth/signup-Login").permitAll()
                         .requestMatchers(EndpointRequest.toAnyEndpoint()).permitAll()
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/secured/user").fullyAuthenticated()

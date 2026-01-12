@@ -8,6 +8,8 @@ import org.example.backendspring.Configuration.SignupRequest;
 import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Enun.UserRole;
 import org.example.backendspring.Repository.UsersRepo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth")
 @CrossOrigin(origins = "http://localhost:5173")
 public class SecurityController {
 
@@ -35,7 +37,7 @@ public class SecurityController {
     private PasswordEncoder passwordEncoder;
     private AuthenticationManager authenticationManager;
     private JwtCore jwtCore;
-
+    private final static Logger log = LoggerFactory.getLogger(SecurityController.class);
 
     @Autowired
     public void setUsersRepo(UsersRepo usersRepo) {
@@ -57,6 +59,8 @@ public class SecurityController {
 
     @PostMapping("/signin")
     ResponseEntity<?> signup(@RequestBody SigninRequest signinRequest) {
+        log.debug("Signin payload: userName='{}', password='{}'", signinRequest.getUserName(), signinRequest.getPassword());
+
         Authentication authentication = null;
         try {
             authentication = authenticationManager.authenticate(

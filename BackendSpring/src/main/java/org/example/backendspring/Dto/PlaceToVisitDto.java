@@ -3,6 +3,7 @@ package org.example.backendspring.Dto;
 import lombok.*;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
@@ -16,8 +17,8 @@ public class PlaceToVisitDto {
     private Double longitude;
     private BigDecimal price;
     private String currency;
-    private String pictureUrl;
-    private String bookingLink;
+    private List<String> pictureUrls;
+   private String bookingLink;
     private Boolean isFavorite;
 
     public PlaceToVisitDto( Long id,String name) {
