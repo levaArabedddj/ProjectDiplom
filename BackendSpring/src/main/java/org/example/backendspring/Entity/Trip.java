@@ -38,7 +38,7 @@ public class Trip {
 
 
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
-    private List<Flight> flights = new ArrayList<>();
+    private List<Booking> bookings = new ArrayList<>();
 
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
     private List<Hotel> hotels = new ArrayList<>();
@@ -48,6 +48,7 @@ public class Trip {
 
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
     private List<Note> notes = new ArrayList<>();
+
 
 }
 

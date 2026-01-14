@@ -1,6 +1,8 @@
 package org.example.backendspring.Dto.TripDTO;
 
 import lombok.*;
+import org.example.backendspring.Dto.DtoAmadeus.Fly.BookingListResponse;
+import org.example.backendspring.Dto.DtoAmadeus.Fly.FlightResponseTrip;
 import org.example.backendspring.Enun.CurrencyId;
 import org.example.backendspring.Enun.TripStatus;
 
@@ -19,8 +21,8 @@ public class TripDto {
     private LocalDate endDate;
     private BigDecimal balance;
     private CurrencyId currency;
-    private TripStatus status; // <-- Добавили поле статуса
-    private List<FlightDto> flights;
+    private TripStatus status;
+    private List<FlightResponseTrip> bookings;
     private List<HotelDto> hotels;
     private List<PlaceCartDto> placesToVisit;
 }

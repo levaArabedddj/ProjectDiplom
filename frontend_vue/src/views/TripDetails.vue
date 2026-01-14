@@ -85,44 +85,88 @@
             </ul>
           </div>
 
-          <div class="glass-card ai-card">
-            <div class="ai-header">
-              <span class="ai-icon">🤖</span>
-              <h3>AI Порадник</h3>
+
+            <div class="glass-card ai-card">
+              <div class="ai-header">
+                <span class="ai-icon">🤖</span>
+                <h3>AI Порадник</h3>
+              </div>
+
+              <div v-if="loadingAdvices" class="ai-loading">
+                <div class="spinner"></div>
+                <p>Аналізую місто {{ trip.cityName }}...</p>
+              </div>
+
+              <div v-else-if="advices.length > 0" class="advices-list">
+                <div v-for="(advice, index) in advices" :key="index" class="advice-item">
+                  <div class="advice-category">
+                    <span>{{ getCategoryIcon(advice.category) }}</span>
+                    <strong>{{ advice.category }}</strong>
+                  </div>
+                  <p class="advice-text">{{ advice.content }}</p>
+                </div>
+              </div>
+
+              <p v-else>Я підготую для вас поради щодо безпеки, економії та особливостей {{ trip.cityName }}.</p>
+
+              <button
+                  class="btn-ai-generate"
+                  @click="generateNewAdvices"
+                  :disabled="loadingAdvices"
+              >
+                {{ advices.length > 0 ? 'Оновити поради' : 'Отримати поради' }}
+              </button>
             </div>
-            <p>Я підібрав для вас 3 ресторани у центрі {{ trip.cityName }}, які підходять під ваш бюджет.</p>
-            <button class="btn-small">Отримати нові поради</button>
-          </div>
+
         </aside>
 
         <main class="main-content">
 
           <section>
             <h2 class="section-title">🛫 Ваші квитки</h2>
-            <div v-if="trip.flights && trip.flights.length" class="tickets-list">
-              <div v-for="f in trip.flights" :key="f.id" class="ticket glass-card">
-                <div class="ticket-left">
-                  <span class="airline">{{ f.airline }}</span>
-                  <div class="route">
-                    <h2>{{ f.fromAirport }}</h2>
-                    <span class="plane-icon">✈️</span>
-                    <h2>{{ f.toAirport }}</h2>
+
+            <div v-if="trip.bookings && trip.bookings.length" class="tickets-list">
+              <div v-for="b in trip.bookings" :key="b.id" class="ticket glass-card">
+                <div class="ticket-content">
+                  <div class="ticket-left">
+                    <div class="airline-info">
+                      <span class="plane-icon-mini">✈️</span>
+                      <span class="flight-num">{{ b.flightNumber || '№ не вказано' }}</span>
+                    </div>
+
+                    <div class="route">
+                      <div class="airport">
+                        <span class="code">{{ b.departureAirport || '???' }}</span>
+                      </div>
+                      <div class="route-line">
+                        <div class="line"></div>
+                        <span class="plane-icon">✈️</span>
+                      </div>
+                      <div class="airport">
+                        <span class="code">{{ b.arrivalAirport || '???' }}</span>
+                      </div>
+                    </div>
+
+                    <div class="times">
+                      <span>📅 {{ formatTime(b.departureTime) }}</span>
+                    </div>
                   </div>
-                  <div class="times">
-                    <span>{{ formatTime(f.departureTime) }}</span>
-                    <span>{{ formatTime(f.arrivalTime) }}</span>
+
+                  <div class="ticket-right">
+                    <div class="pnr-label">ID: {{ b.id }}</div>
+                    <div class="price-tag">{{ b.totalPrice }} <span class="curr">{{ b.currency }}</span></div>
                   </div>
-                </div>
-                <div class="ticket-right">
-                  <span class="seat">GATE A1</span>
-                  <span class="price">{{ f.price }} {{ f.currency }}</span>
                 </div>
               </div>
+            </div> <div v-else class="empty-state glass-card">
+            <p>Квитків ще немає</p>
+            <div class="buttons-row">
+              <button class="btn-action" @click="$router.push('/avion')">Знайти нові 🔍</button>
+              <button class="btn-action secondary" @click="openBookingModal" style="margin-left: 10px;">
+                Додати з моїх квитків 🎫
+              </button>
             </div>
-            <div v-else class="empty-state glass-card">
-              <p>Квитків ще немає</p>
-              <button class="btn-action">Знайти авіаквитки 🔍</button>
-            </div>
+          </div>
           </section>
 
           <section class="hotels-section">
@@ -143,7 +187,7 @@
             </div>
             <div v-else class="empty-state glass-card">
               <p>Готель не заброньовано</p>
-              <button class="btn-action">Знайти готель на Booking 🏨</button>
+              <button class="btn-action" @click="$router.push('/hotels')">Знайти готель на Booking 🏨</button>
             </div>
           </section>
 
@@ -344,6 +388,12 @@
       </div>
     </div>
   </div>
+
+  <UserBookingsModal
+      v-if="showBookingModal"
+      @close="showBookingModal = false"
+      @add="handleAddTicket"
+  />
 </template>
 
 
@@ -352,22 +402,23 @@
   import { useRoute, useRouter } from 'vue-router'
   import api from '@/api/axios'
   import PlacesFinder from '@/components/PlacesFinder.vue'
-
+  import UserBookingsModal from '@/components/UserBookingsModal.vue';
   const route = useRoute()
   const router = useRouter()
 
   // реактивная модель поездки
   const trip = ref({
-  id: null,
-  cityName: '',
-  startDate: null,
-  endDate: null,
-  balance: null,
-  currency: null,
-  flights: [],
-  hotels: [],
-  placesToVisit: []
-})
+    id: null,
+    cityName: '',
+    startDate: null,
+    endDate: null,
+    balance: null,
+    currency: null,
+    bookings: [],
+    hotels: [],
+    placesToVisit: []
+  })
+
 
   const weatherList = ref([])
   const selectedDay = ref(0)
@@ -427,16 +478,30 @@
     showPlacesFinder.value = false
   }
 
+  // ЗАМЕНИТЕ старую fetchTrip на эту
   async function fetchTrip() {
-  const tripId = route.params.tripId
-  if (!tripId) return
-  try {
-  const tripResponse = await api.get(`/api/trips/${tripId}`)
-  trip.value = tripResponse.data
-} catch (e) {
-  console.error('fetchTrip error', e)
-}
-}
+    const tripId = route.params.tripId
+    if (!tripId) return
+    try {
+      const tripResponse = await api.get(`/api/trips/${tripId}`)
+      const data = tripResponse.data || {}
+
+      // normalize: если сервер возвращает flights, но шаблон ожидает bookings
+      if (data.flights && !data.bookings) {
+        data.bookings = data.flights
+      }
+
+      // гарантируем, что поля — массивы
+      data.bookings = Array.isArray(data.bookings) ? data.bookings : []
+      data.hotels = Array.isArray(data.hotels) ? data.hotels : []
+      data.placesToVisit = Array.isArray(data.placesToVisit) ? data.placesToVisit : []
+
+      trip.value = data
+    } catch (e) {
+      console.error('fetchTrip error', e)
+    }
+  }
+
 
   const fetchWeather = async (city, dayOffset = 0) => {
   if (!city) return
@@ -597,8 +662,60 @@
       console.error(e)
     }
   }
+
+  const showBookingModal = ref(false);
+
+  function openBookingModal() {
+    showBookingModal.value = true;
+  }
+
+  async function handleAddTicket(ticket) {
+    const confirmed = window.confirm(`Додати квиток (Ref: ${ticket.pnrReference}) до цієї подорожі?`);
+
+    if (confirmed) {
+      try {
+        await api.post(`/api/trips/${trip.value.id}/add-booking/${ticket.id}`);
+        showBookingModal.value = false;
+        await fetchTrip();
+
+      } catch (e) {
+        console.error("Помилка додавання квитка", e);
+        alert("Не вдалося додати квиток. Спробуйте пізніше.");
+      }
+    }
+  }
+
+  const advices = ref([]);
+  const loadingAdvices = ref(false);
+
+  async function generateNewAdvices() {
+    if (!trip.value?.id) return;
+
+    loadingAdvices.value = true;
+    try {
+      const res = await api.post(`/api/trips/${trip.value.id}/advice/generate`);
+      advices.value = res.data;
+    } catch (e) {
+      console.error("Помилка при генерації порад:", e);
+      alert("Не вдалося отримати поради від AI.");
+    } finally {
+      loadingAdvices.value = false;
+    }
+  }
+
+  const getCategoryIcon = (category) => {
+    const cat = category.toLowerCase();
+    if (cat.includes('безпека')) return '🛡️';
+    if (cat.includes('економія')) return '💰';
+    if (cat.includes('їжа') || cat.includes('ресторан')) return '🍽️';
+    if (cat.includes('транспорт')) return '🚌';
+    return '💡';
+  };
+
+
 </script>
 <style scoped>
+
 
 .ww-header {
   display: flex;
@@ -606,8 +723,11 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
+  font-size: 0.9rem;
+  opacity: 0.8;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 8px;
 }
-
 .weather-tabs {
   display: flex;
   gap: 8px;
@@ -669,12 +789,17 @@
 
 .weather-widget {
   background: rgba(0,0,0,0.2);
-  padding: 10px 20px;
-  border-radius: 12px;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  padding: 20px;
+  width: 100%;
+  border-radius: 16px;
+  box-sizing: border-box;
 }
+
+
+
 .amount { font-size: 1.4rem; font-weight: bold; color: #4ade80; }
 
 .dashboard-grid {
@@ -688,8 +813,7 @@
 .menu-card li { padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.2s; display: flex; gap: 10px;}
 .menu-card li:hover { color: #646cff; transform: translateX(5px); }
 
-.ai-card { margin-top: 20px; background: linear-gradient(145deg, rgba(100,108,255,0.2), rgba(0,0,0,0)); border: 1px solid rgba(100,108,255,0.3); }
-.ai-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+
 .ai-icon { font-size: 1.5rem; }
 
 .section-title { margin-top: 0; margin-bottom: 15px; font-size: 1.2rem; opacity: 0.9; }
@@ -711,15 +835,21 @@
   border-left: 2px dashed rgba(255,255,255,0.3);
 }
 
-.ticket-left { flex: 1; padding-right: 20px; }
 .ticket-right {
-  width: 120px;
+  width: 140px;
+  background: rgba(255, 255, 255, 0.03);
+  border-left: 2px dashed rgba(255, 255, 255, 0.2);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding-left: 20px;
+  padding: 15px;
+  box-sizing: border-box;
 }
+
+
+.ticket-left { flex: 1; padding-right: 20px; }
+
 .route { display: flex; align-items: center; gap: 15px; margin: 5px 0; }
 .price { font-size: 1.2rem; font-weight: bold; color: #ffd700; }
 .airline { text-transform: uppercase; font-size: 0.8rem; letter-spacing: 1px; opacity: 0.7; }
@@ -728,7 +858,7 @@
 .btn-link { color: #646cff; text-decoration: none; font-weight: bold; }
 
 .place-mini-card {
-  background: rgba(0,0,0,0.2);
+  background: rgba(255,255,255,0.02);
   padding: 15px;
   border-radius: 10px;
   margin-bottom: 10px;
@@ -755,24 +885,9 @@
   .ticket { flex-direction: column; align-items: flex-start; gap: 15px; }
   .ticket-right { width: 100%; flex-direction: row; justify-content: space-between; padding: 0; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;}
 }
-.weather-widget {
-  padding: 20px;
-  width: 100%;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 16px;
-  box-sizing: border-box;
-  align-items: stretch;
-}
 
-.ww-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 15px;
-  font-size: 0.9rem;
-  opacity: 0.8;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  padding-bottom: 8px;
-}
+
+
 
 .current-weather-box {
   margin-bottom: 20px;
@@ -840,7 +955,6 @@
 
 .places-controls { margin-bottom: 8px; display:flex; gap:8px; align-items:center; }
 .simple-places-list { list-style:none; padding:0; margin:0; display:block; gap:8px; }
-.place-mini-card { padding:10px; border-radius:8px; background: rgba(255,255,255,0.02); margin-bottom:8px; }
 .actions-row { margin-top:10px; }
 
 .place-actions {
@@ -972,18 +1086,7 @@
 }
 
 
-.completed-text {
-  text-decoration: line-through;
-  opacity: 0.5;
-}
 
-.btn-delete-note {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: #ff4757;
-  cursor: pointer;
-}
 .notes-container {
   margin-top: 15px;
   margin-bottom: 15px;
@@ -1087,6 +1190,9 @@
   padding: 2px;
   transition: 0.2s;
   margin-top: -2px;
+  margin-left: auto;
+  background: none;
+  color: #ff4757;
 }
 
 .btn-delete-note:hover {
@@ -1257,4 +1363,237 @@
   gap: 8px;            /* Добавляет отступ между текстом и кнопкой */
   min-width: 100px;    /* Немного увеличим для красоты */
 }
+
+.ticket-container {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  margin-bottom: 20px;
+  display: flex;
+  overflow: hidden;
+}
+.tickets-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
+.ticket.glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  margin-bottom: 15px;
+  overflow: hidden;
+  transition: transform 0.2s;
+  display: block;
+}
+
+.ticket-content {
+  display: flex;
+  justify-content: space-between;
+  min-height: 100px;
+  width: 100%;
+}
+
+.ticket-left {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.airline-info {
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #4facfe;
+  font-weight: bold;
+}
+
+.route {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 5px 0;
+}
+
+.airport .code {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: 1px;
+}
+
+
+.route-line {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  position: relative;
+  min-width: 50px;
+  max-width: 120px;
+}
+
+.route-line .line {
+  height: 0;
+  width: 100%;
+  border-top: 2px dashed rgba(255, 255, 255, 0.3);
+}
+
+
+.route-line::after {
+  content: '✈';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #2c5364; /* Цвет фона страницы, чтобы скрыть линию под самолетом */
+  padding: 0 5px;
+  font-size: 12px;
+}
+
+.route-line .plane-icon {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  top: 50%;
+  font-size: 14px;
+  background: transparent;
+  padding: 0 4px;
+}
+
+
+
+.price-tag {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #4ade80;
+}
+
+.pnr-label {
+  font-size: 0.7rem;
+  opacity: 0.6;
+  margin-bottom: 5px;
+}
+
+.curr {
+  font-size: 0.9rem;
+}
+
+.times {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ai-card {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  background: linear-gradient(145deg, rgba(100,108,255,0.2),
+  rgba(0,0,0,0)); border: 1px solid rgba(100,108,255,0.3);
+}
+
+.ai-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.advices-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.advice-item {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px;
+  border-left: 3px solid #6366f1;
+}
+
+.advice-category {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #818cf8;
+  margin-bottom: 5px;
+  display: flex;
+  gap: 5px;
+}
+
+.advice-text {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  margin: 0;
+  color: #e2e8f0;
+}
+
+.btn-ai-generate {
+  background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.3s;
+}
+
+.btn-ai-generate:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.btn-ai-generate:disabled {
+  background: #4a5568;
+  cursor: not-allowed;
+}
+
+.ai-loading {
+  text-align: center;
+  padding: 20px 0;
+}
+.spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(255,255,255,0.1);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 10px;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .ticket-content {
+    flex-direction: column;
+  }
+
+  .route-line {
+    max-width: none;
+  }
+}
+
+.buttons-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-start;
+}
+.empty-state .btn-action.secondary {
+  background: transparent;
+  border: 1px dashed rgba(255,255,255,0.12);
+}
+
+
+
 </style>

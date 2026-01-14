@@ -3,19 +3,14 @@ package org.example.backendspring.ServiceApi;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.backendspring.Dto.PlaceDetailsDto;
 import org.example.backendspring.Dto.UserPreferencesRequest;
-import org.example.backendspring.Entity.FavoritePlace;
-import org.example.backendspring.Entity.RecommendedPlace;
-import org.example.backendspring.Entity.UserPreferences;
-import org.example.backendspring.Entity.Users;
-import org.example.backendspring.Repository.FavoriteRepo;
-import org.example.backendspring.Repository.RecommendedPlaceRepo;
-import org.example.backendspring.Repository.UserPreferencesRepository;
-import org.example.backendspring.Repository.UsersRepo;
+import org.example.backendspring.Entity.*;
+import org.example.backendspring.Repository.*;
 import org.example.backendspring.Service.UserPreferencesService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,31 +34,33 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 @Slf4j
 @Service
-
-@RequiredArgsConstructor
 public class OpenAIService {
 
     @Value("${openai.api.key}")
     private String openAiApiKey;
 
-    @Autowired
     private final RestTemplate restTemplate;
-
     private final ObjectMapper objectMapper = new ObjectMapper();
-
     private static final String OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+    private final RecommendedPlaceRepo placeRepo;
+    private final UserPreferencesRepository userPrefsRepo;
+    private final UsersRepo usersRepo;
+    private final UserPreferencesService userPreferencesService;
+    private final FavoriteRepo favoriteRepo;
+    private final TripsRepo tripsRepo;
+    private final TripAdviceRepo tripAdviceRepo;
 
     @Autowired
-    private RecommendedPlaceRepo placeRepo;
-    @Autowired
-    private UserPreferencesRepository userPrefsRepo;
-
-    @Autowired
-    private UsersRepo usersRepo;
-    @Autowired
-    private UserPreferencesService userPreferencesService;
-    @Autowired
-    private FavoriteRepo favoriteRepo;
+    public OpenAIService(RestTemplate restTemplate, RecommendedPlaceRepo placeRepo, UserPreferencesRepository userPrefsRepo, UsersRepo usersRepo, UserPreferencesService userPreferencesService, FavoriteRepo favoriteRepo, TripsRepo tripsRepo, TripAdviceRepo tripAdviceRepo) {
+        this.restTemplate = restTemplate;
+        this.placeRepo = placeRepo;
+        this.userPrefsRepo = userPrefsRepo;
+        this.usersRepo = usersRepo;
+        this.userPreferencesService = userPreferencesService;
+        this.favoriteRepo = favoriteRepo;
+        this.tripsRepo = tripsRepo;
+        this.tripAdviceRepo = tripAdviceRepo;
+    }
 
     public JsonNode getRecommendations(String userJson, String userName) {
         try {
@@ -251,7 +248,56 @@ public class OpenAIService {
             throw new RuntimeException("Ошибка при запросе к GPT", e);
         }
     }
+    public JsonNode askGptNew(String prompt) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.setBearerAuth(openAiApiKey);
 
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", "gpt-4o-mini");
+            requestBody.put("response_format", Map.of("type", "json_object"));
+
+            requestBody.put("messages", List.of(
+                    Map.of("role", "system", "content", "Ты помощник API. Отвечай ТОЛЬКО чистым JSON без markdown блоков."),
+                    Map.of("role", "user", "content", prompt)
+            ));
+
+            String body = objectMapper.writeValueAsString(requestBody);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    OPENAI_URL,
+                    HttpMethod.POST,
+                    new HttpEntity<>(body, headers),
+                    String.class
+            );
+
+            JsonNode jsonResponse = objectMapper.readTree(response.getBody());
+
+            // Получаем сырой текст ответа
+            String content = jsonResponse.path("choices").get(0).path("message").path("content").asText();
+
+
+            if (content != null) {
+                content = content.trim();
+                if (content.startsWith("```json")) {
+                    content = content.substring(7);
+                } else if (content.startsWith("```")) {
+                    content = content.substring(3);
+                }
+                if (content.endsWith("```")) {
+                    content = content.substring(0, content.length() - 3);
+                }
+                content = content.trim();
+            }
+
+            return objectMapper.readTree(content);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Ошибка при запросе к GPT: " + e.getMessage(), e);
+        }
+    }
 
     public JsonNode comparePlaces(String place1, String place2,Long userId) throws JsonProcessingException {
 
@@ -362,6 +408,7 @@ public class OpenAIService {
         d.setDislikedPlaces(p.getDislikedPlaces() == null ? Map.of() : p.getDislikedPlaces());
         return d;
     }
+
 }
 
 

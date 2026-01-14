@@ -1,8 +1,15 @@
 package org.example.backendspring.Dto.DtoAmadeus.Fly;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.checkerframework.checker.units.qual.A;
+
+import java.time.LocalDateTime;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class FlightResponse {
     private String id;
     private String airline;
@@ -14,5 +21,7 @@ public class FlightResponse {
     private String aircraft;
     private String duration;
     private Double price;
+
+
 }
 

@@ -5,12 +5,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.example.backendspring.Configuration.MyUserDetails;
 import org.example.backendspring.Dto.PlaceToVisitDto;
+import org.example.backendspring.Dto.TripAdviceDTO;
 import org.example.backendspring.Dto.TripDTO.NoteDto;
 import org.example.backendspring.Dto.TripDTO.TripDto;
-import org.example.backendspring.Entity.Note;
-import org.example.backendspring.Entity.Users;
+import org.example.backendspring.Entity.Trip;
 import org.example.backendspring.Service.TripsService;
-import org.example.backendspring.ServiceApi.AmadeusClient;
+import org.example.backendspring.ServiceApi.OpenAIService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -32,12 +32,14 @@ public class TripsController {
     private final RestTemplate restTemplate;
     @Value("${amadeus.base-url}")
     private String baseUrl;
+    private final OpenAIService openAIService;
 
 
     @Autowired
-    public TripsController(TripsService tripsService, RestTemplate restTemplate) {
+    public TripsController(TripsService tripsService, RestTemplate restTemplate, OpenAIService openAIService) {
         this.tripsService = tripsService;
         this.restTemplate = restTemplate;
+        this.openAIService = openAIService;
     }
 
     @PostMapping("/create")
@@ -187,5 +189,21 @@ public class TripsController {
                                               @AuthenticationPrincipal MyUserDetails user) {
         TripDto updatedTrip = tripsService.updateTrip(tripId, tripDto, user.getUser_id());
         return ResponseEntity.ok(updatedTrip);
+    }
+
+    @PostMapping("/{tripId}/add-booking/{bookingId}")
+    public ResponseEntity<?> addBookingToTrip(
+            @PathVariable Long tripId,
+            @PathVariable Long bookingId,
+            @AuthenticationPrincipal MyUserDetails user) {
+
+        Trip updatedTrip = tripsService.addBookingToTrip(tripId, bookingId, user.getUser_id());
+        return ResponseEntity.ok(updatedTrip);
+    }
+
+
+    @PostMapping("/{tripId}/advice/generate")
+    public ResponseEntity<List<TripAdviceDTO>> generateAdvices(@PathVariable Long tripId) {
+        return ResponseEntity.ok(tripsService.generateQuickAdvices(tripId));
     }
 }

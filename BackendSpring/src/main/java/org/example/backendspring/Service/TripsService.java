@@ -5,13 +5,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import jakarta.transaction.Transactional;
 import org.example.backendspring.Configuration.MyUserDetails;
+import org.example.backendspring.Dto.DtoAmadeus.Fly.BookingListResponse;
+import org.example.backendspring.Dto.DtoAmadeus.Fly.FlightResponse;
+import org.example.backendspring.Dto.DtoAmadeus.Fly.FlightResponseTrip;
 import org.example.backendspring.Dto.PlaceToVisitDto;
+import org.example.backendspring.Dto.TripAdviceDTO;
 import org.example.backendspring.Dto.TripDTO.*;
 
 import org.example.backendspring.Entity.*;
 import org.example.backendspring.Enun.TripStatus;
 import org.example.backendspring.Repository.*;
 import org.example.backendspring.ServiceApi.AmadeusClient;
+import org.example.backendspring.ServiceApi.OpenAIService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,9 +51,11 @@ public class TripsService {
     private String baseUrl;
     private static final Logger log = LoggerFactory.getLogger(TripsService.class.getName());
     private final NoteRepo noteRepo;
-
+    private final BookingRepo bookingRepo;
+    private final TripAdviceRepo tripAdviceRepo;
+    private final OpenAIService openAIService;
     @Autowired
-    public TripsService(FlightRepo flightRepo, TripsRepo tripsRepo, HotelRepo hotelRepo, PlaceCartRepo placeCartRepo, UsersRepo usersRepo, RestTemplate restTemplate, PlaceVisitRepo placeVisitRepo, AmadeusClient amadeusClient, NoteRepo noteRepo) {
+    public TripsService(FlightRepo flightRepo, TripsRepo tripsRepo, HotelRepo hotelRepo, PlaceCartRepo placeCartRepo, UsersRepo usersRepo, RestTemplate restTemplate, PlaceVisitRepo placeVisitRepo, AmadeusClient amadeusClient, NoteRepo noteRepo, BookingRepo bookingRepo, TripAdviceRepo tripAdviceRepo, OpenAIService openAIService) {
         this.flightRepo = flightRepo;
         this.tripsRepo = tripsRepo;
         this.hotelRepo = hotelRepo;
@@ -58,6 +65,9 @@ public class TripsService {
         this.restTemplate = restTemplate;
         this.amadeusClient = amadeusClient;
         this.noteRepo = noteRepo;
+        this.bookingRepo = bookingRepo;
+        this.tripAdviceRepo = tripAdviceRepo;
+        this.openAIService = openAIService;
     }
 
     // 1. Создание поездки
@@ -100,15 +110,22 @@ public class TripsService {
                 .endDate(trip.getEndDate())
                 .balance(trip.getBalance())
                 .currency(trip.getCurrency())
-                .flights(trip.getFlights().stream()
-                        .map(f -> new FlightDto(f.getId(), f.getFromAirport(), f.getToAirport(), f.getDepartureTime(),f.getArrivalTime(),f.getAirline(),f.getFlightNumber(),f.getPrice(),f.getCurrency(),f.getBookingUrl()))
-                        .toList())
                 .hotels(trip.getHotels().stream()
                         .map(h -> new HotelDto(h.getId(), h.getName(), h.getAddress(), h.getStars(),h.getCheckInDate(),h.getCheckOutDate(),h.getPricePerNight(),h.getCurrency(),h.getTotalPrice(),h.getBookingUrl(),h.getType()))
                         .toList())
 //                .placesToVisit(trip.getPlacesToVisit().stream()
 //                        .map(p -> new PlaceCartDto(p.getId(), p.getName(), p.getDescription(),p.getCategory(),p.getAddress(),p.getGeoCoordinates(),p.getEstimatedVisitTime(),p.getPrice(),p.getCurrency(),p.getSource(),p.getIsFavorite()))
 //                        .toList())
+                .bookings(trip.getBookings().stream()
+                        .map(b-> new FlightResponseTrip(b.getId(),
+                                b.getFlightNumber(),
+                                b.getTotalPrice(),
+                                b.getCurrency(),
+                                b.getDestinationLocation(),
+                                b.getOriginLocation(),
+                                b.getDepartureDate(),
+                                String.valueOf(b.getStatus()))).toList()
+                )
                 .build();
     }
 
@@ -423,5 +440,50 @@ public class TripsService {
                 .currency(savedTrip.getCurrency())
                 .status(savedTrip.getStatus())
                 .build();
+    }
+
+    public Trip addBookingToTrip(Long tripId, Long bookingId, Long userId) {
+        Trip trip = tripsRepo.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found"));
+
+        Booking booking = bookingRepo.findById(bookingId)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+
+        if (!booking.getUser().getUser_id().equals(userId)) {
+            throw new RuntimeException("Access denied: You can only add your own bookings");
+        }
+
+        booking.setTrip(trip);
+        bookingRepo.save(booking);
+        return trip;
+    }
+
+    public List<TripAdviceDTO> generateQuickAdvices(Long tripId) {
+        Trip trip = tripsRepo.findById(tripId)
+                .orElseThrow(() -> new RuntimeException("Trip not found"));
+
+        String prompt = """
+    Ты — эксперт по туризму. Дай 5 коротких советов для города %s.
+    Бюджет: %s %s.
+    Формат ответа JSON: {"advices": [{"category": "...", "content": "..."}]}
+    """.formatted(trip.getCityName(), trip.getBalance(), trip.getCurrency());
+
+        try {
+            JsonNode rootNode = openAIService.askGptNew(prompt);
+            JsonNode advicesArray = rootNode.path("advices");
+
+            List<TripAdviceDTO> result = new ArrayList<>();
+            if (advicesArray.isArray()) {
+                for (JsonNode node : advicesArray) {
+                    result.add(new TripAdviceDTO(
+                            node.path("category").asText(),
+                            node.path("content").asText()
+                    ));
+                }
+            }
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Ошибка GPT: " + e.getMessage());
+        }
     }
 }
