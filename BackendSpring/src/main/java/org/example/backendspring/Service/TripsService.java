@@ -52,10 +52,9 @@ public class TripsService {
     private static final Logger log = LoggerFactory.getLogger(TripsService.class.getName());
     private final NoteRepo noteRepo;
     private final BookingRepo bookingRepo;
-    private final TripAdviceRepo tripAdviceRepo;
     private final OpenAIService openAIService;
     @Autowired
-    public TripsService(FlightRepo flightRepo, TripsRepo tripsRepo, HotelRepo hotelRepo, PlaceCartRepo placeCartRepo, UsersRepo usersRepo, RestTemplate restTemplate, PlaceVisitRepo placeVisitRepo, AmadeusClient amadeusClient, NoteRepo noteRepo, BookingRepo bookingRepo, TripAdviceRepo tripAdviceRepo, OpenAIService openAIService) {
+    public TripsService(FlightRepo flightRepo, TripsRepo tripsRepo, HotelRepo hotelRepo, PlaceCartRepo placeCartRepo, UsersRepo usersRepo, RestTemplate restTemplate, PlaceVisitRepo placeVisitRepo, AmadeusClient amadeusClient, NoteRepo noteRepo, BookingRepo bookingRepo, OpenAIService openAIService) {
         this.flightRepo = flightRepo;
         this.tripsRepo = tripsRepo;
         this.hotelRepo = hotelRepo;
@@ -66,7 +65,6 @@ public class TripsService {
         this.amadeusClient = amadeusClient;
         this.noteRepo = noteRepo;
         this.bookingRepo = bookingRepo;
-        this.tripAdviceRepo = tripAdviceRepo;
         this.openAIService = openAIService;
     }
 

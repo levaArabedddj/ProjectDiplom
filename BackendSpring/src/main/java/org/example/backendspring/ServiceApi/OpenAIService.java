@@ -48,10 +48,9 @@ public class OpenAIService {
     private final UserPreferencesService userPreferencesService;
     private final FavoriteRepo favoriteRepo;
     private final TripsRepo tripsRepo;
-    private final TripAdviceRepo tripAdviceRepo;
 
     @Autowired
-    public OpenAIService(RestTemplate restTemplate, RecommendedPlaceRepo placeRepo, UserPreferencesRepository userPrefsRepo, UsersRepo usersRepo, UserPreferencesService userPreferencesService, FavoriteRepo favoriteRepo, TripsRepo tripsRepo, TripAdviceRepo tripAdviceRepo) {
+    public OpenAIService(RestTemplate restTemplate, RecommendedPlaceRepo placeRepo, UserPreferencesRepository userPrefsRepo, UsersRepo usersRepo, UserPreferencesService userPreferencesService, FavoriteRepo favoriteRepo, TripsRepo tripsRepo) {
         this.restTemplate = restTemplate;
         this.placeRepo = placeRepo;
         this.userPrefsRepo = userPrefsRepo;
@@ -59,7 +58,6 @@ public class OpenAIService {
         this.userPreferencesService = userPreferencesService;
         this.favoriteRepo = favoriteRepo;
         this.tripsRepo = tripsRepo;
-        this.tripAdviceRepo = tripAdviceRepo;
     }
 
     public JsonNode getRecommendations(String userJson, String userName) {
