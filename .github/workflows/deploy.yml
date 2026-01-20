@@ -55,5 +55,8 @@ jobs:
             echo 
             docker-compose up -d --build backend
             
+            echo 
+            docker restart prometheus || true
+            
 
             
