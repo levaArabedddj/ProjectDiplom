@@ -5,7 +5,7 @@ on:
     branches: [ "master" ]
     paths:
       - 'BackendSpring/**'
-      - 'deploy.yml'
+      - '.github/workflows/deploy.yml'
 
 jobs:
   build-and-deploy:
@@ -21,7 +21,6 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-
       - name: Build with Maven
         run: mvn clean package -DskipTests
         working-directory: ./BackendSpring
@@ -31,7 +30,7 @@ jobs:
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}-
+          key: ${{ secrets.SSH_PRIVATE_KEY }} # <-- УБРАЛ ЛИШНЕЕ ТИРЕ
           source: "BackendSpring/target/*.jar"
           target: "/root/Java-jar-files/"
           strip_components: 2
@@ -45,9 +44,16 @@ jobs:
           script: |
             cd /root/Java-jar-files/
             
-            # Переименовываем (тут всё по-старому)
+            echo "📂 Проверяем файлы в папке:"
+            ls -la
+            
+            # 1. Удаляем старый app.jar, чтобы не было конфликта
+            rm -f app.jar
+            
+            # 2. Теперь переименовываем новый файл (он там будет один)
             mv *.jar app.jar
             
             echo "🚀 Обновляем Backend..."
-            # Убедись, что docker-compose.yml лежит в этой же папке на сервере!
+            # 3. Запускаем (УБРАЛ ТОЧКУ В КОНЦЕ)
             docker-compose up -d --build backend
+            
