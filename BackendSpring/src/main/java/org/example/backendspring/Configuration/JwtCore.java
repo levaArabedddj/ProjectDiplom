@@ -55,7 +55,7 @@ public class JwtCore {
                 .claim("userId", user.getUser_id())
                 .claim("gmail", user.getGmail())
                 .setIssuedAt(now)
-                .setExpiration(Date.from(Instant.now().plus(15, ChronoUnit.MINUTES)))
+                .setExpiration(Date.from(Instant.now().plus(59, ChronoUnit.MINUTES)))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }

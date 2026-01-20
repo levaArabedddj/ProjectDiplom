@@ -153,27 +153,93 @@ function close() {
   emit('close')
 }
 </script>
-
 <style scoped>
-/* Твои базовые стили остаются, добавляем только для подсказок */
-
-.city-input-container {
-  position: relative; /* Чтобы список был привязан к инпуту */
+/* Основний оверлей */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
 }
 
+/* Модальне вікно */
+.modal {
+  width: 100%;
+  max-width: 420px;
+  background: #1e293b; /* Темно-синій фон */
+  border-radius: 24px;
+  padding: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  color: white;
+}
+
+.modal h2 {
+  margin-top: 0;
+  text-align: center;
+  margin-bottom: 24px;
+  font-size: 1.5rem;
+}
+
+/* Стилізація лейблів */
+label {
+  display: block;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  color: #cbd5e1; /* Світло-сірий */
+  font-weight: 500;
+}
+
+/* Поля вводу (темна тема) */
+input, select {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(0, 0, 0, 0.3); /* Темний напівпрозорий */
+  color: white;
+  outline: none;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+
+  /* Магія для іконки календаря в темній темі */
+  color-scheme: dark;
+}
+
+input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+input:focus, select:focus {
+  border-color: #646cff;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* Контейнер для інпуту міста */
+.city-input-container {
+  position: relative;
+}
+
+/* Список підказок (темна тема) */
 .suggestions-list {
   position: absolute;
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  color: #0f2027;
+  background: #1e293b; /* Такий же колір як у модалки */
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
   margin-top: 5px;
   padding: 0;
   list-style: none;
-  z-index: 10;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  z-index: 20;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.5);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -181,8 +247,9 @@ function close() {
 .suggestions-list li {
   padding: 12px 16px;
   cursor: pointer;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   font-size: 0.9rem;
+  color: #e2e8f0;
 }
 
 .suggestions-list li:last-child {
@@ -190,15 +257,49 @@ function close() {
 }
 
 .suggestions-list li:hover {
-  background: #f0f0ff;
-  color: #646cff;
+  background: rgba(255, 255, 255, 0.1); /* Підсвітка при наведенні */
+  color: #fff;
 }
 
-/* Остальные стили из твоего кода... */
-.overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); }
-.modal { width: 100%; max-width: 420px; background: #1e293b; border-radius: 24px; padding: 32px; border: 1px solid rgba(255, 255, 255, 0.2); }
-input, select { margin-top: 8px; padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); background: white; color: #0f2027; outline: none; width: 100%; box-sizing: border-box; }
-.actions { display: flex; gap: 16px; margin-top: 24px; }
-.btn-main { flex: 1; background: #646cff; color: white; border: none; padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; }
-.btn-secondary { flex: 1; background: transparent; color: white; border: 1px solid rgba(255,255,255,0.3); padding: 12px; border-radius: 12px; cursor: pointer; }
+/* Кнопки */
+.actions {
+  display: flex;
+  gap: 16px;
+  margin-top: 32px;
+}
+
+.btn-main {
+  flex: 1;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.btn-main:hover {
+  opacity: 0.9;
+}
+.btn-main:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  flex: 1;
+  background: transparent;
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
 </style>

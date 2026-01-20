@@ -40,11 +40,8 @@ public class Trip {
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
     private List<Booking> bookings = new ArrayList<>();
 
-    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
-    private List<Hotel> hotels = new ArrayList<>();
 
-    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
-    private List<PlaceCart> placesToVisit = new ArrayList<>();
+
 
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
     private List<Note> notes = new ArrayList<>();

@@ -37,10 +37,7 @@ import java.util.stream.Collectors;
 @Service
 public class TripsService {
 
-    public final FlightRepo flightRepo;
     public final TripsRepo tripsRepo;
-    public final HotelRepo hotelRepo;
-    public final PlaceCartRepo placeCartRepo;
     public final UsersRepo usersRepo;
     private static final String BASE_URL = "https://test.api.amadeus.com";
     private final RestTemplate restTemplate;
@@ -54,11 +51,8 @@ public class TripsService {
     private final BookingRepo bookingRepo;
     private final OpenAIService openAIService;
     @Autowired
-    public TripsService(FlightRepo flightRepo, TripsRepo tripsRepo, HotelRepo hotelRepo, PlaceCartRepo placeCartRepo, UsersRepo usersRepo, RestTemplate restTemplate, PlaceVisitRepo placeVisitRepo, AmadeusClient amadeusClient, NoteRepo noteRepo, BookingRepo bookingRepo, OpenAIService openAIService) {
-        this.flightRepo = flightRepo;
+    public TripsService( TripsRepo tripsRepo,   UsersRepo usersRepo, RestTemplate restTemplate, PlaceVisitRepo placeVisitRepo, AmadeusClient amadeusClient, NoteRepo noteRepo, BookingRepo bookingRepo, OpenAIService openAIService) {
         this.tripsRepo = tripsRepo;
-        this.hotelRepo = hotelRepo;
-        this.placeCartRepo = placeCartRepo;
         this.placeVisitRepo = placeVisitRepo;
         this.usersRepo = usersRepo;
         this.restTemplate = restTemplate;
@@ -108,9 +102,6 @@ public class TripsService {
                 .endDate(trip.getEndDate())
                 .balance(trip.getBalance())
                 .currency(trip.getCurrency())
-                .hotels(trip.getHotels().stream()
-                        .map(h -> new HotelDto(h.getId(), h.getName(), h.getAddress(), h.getStars(),h.getCheckInDate(),h.getCheckOutDate(),h.getPricePerNight(),h.getCurrency(),h.getTotalPrice(),h.getBookingUrl(),h.getType()))
-                        .toList())
 //                .placesToVisit(trip.getPlacesToVisit().stream()
 //                        .map(p -> new PlaceCartDto(p.getId(), p.getName(), p.getDescription(),p.getCategory(),p.getAddress(),p.getGeoCoordinates(),p.getEstimatedVisitTime(),p.getPrice(),p.getCurrency(),p.getSource(),p.getIsFavorite()))
 //                        .toList())

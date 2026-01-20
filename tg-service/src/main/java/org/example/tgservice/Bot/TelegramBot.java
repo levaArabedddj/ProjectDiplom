@@ -4,7 +4,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.example.tgservice.BD.Feedback;
 import org.example.tgservice.BD.Users;
 import org.example.tgservice.Repo.FeedbackRepo;
-import org.example.tgservice.BD.TelegramUser;
 import org.example.tgservice.Repo.UserRepo;
 import org.example.tgservice.Repo.UsersRepo;
 import org.example.tgservice.Service.*;
@@ -106,6 +105,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             📝 Отзывы:
             /feedback <текст> – отправить отзыв.
+
 
             """;
             sendMessage(chatId, helpText);

@@ -178,16 +178,168 @@ async function handleFinalBooking() {
 </script>
 
 <style scoped>
-.booking-container { max-width: 800px; margin: 2rem auto; padding: 1rem; font-family: sans-serif; }
-.loading-state { text-align: center; margin-top: 4rem; }
-.form-section { background: #f9f9f9; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem; }
-.form-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
-.field { flex: 1; display: flex; flex-direction: column; }
-.field label { font-size: 0.9rem; margin-bottom: 0.3rem; color: #666; }
-input, select { padding: 0.6rem; border: 1px solid #ccc; border-radius: 4px; }
-.price-tag { font-size: 1.5rem; color: #2ecc71; font-weight: bold; }
-.confirm-btn { width: 100%; padding: 1rem; background: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 1.1rem; }
-.confirm-btn:disabled { background: #bdc3c7; }
-.spinner { border: 4px solid #f3f3f3; border-top: 4px solid #3498db; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+/* Основний контейнер */
+.booking-container {
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 20px;
+  font-family: 'Inter', sans-serif;
+  color: #ffffff; /* Весь текст за замовчуванням білий */
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 2rem;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Стан завантаження */
+.loading-state {
+  text-align: center;
+  margin-top: 4rem;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 40px;
+  border-radius: 16px;
+  backdrop-filter: blur(5px);
+}
+
+/* Картка помилки */
+.error-card {
+  background: rgba(220, 53, 69, 0.2);
+  border: 1px solid rgba(220, 53, 69, 0.4);
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+}
+.back-btn {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Міні-картка з інфо про рейс */
+.flight-summary-mini {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 25px;
+  backdrop-filter: blur(10px);
+}
+.flight-summary-mini h3 { margin-top: 0; margin-bottom: 10px; color: #a5b4fc; }
+.price-tag { font-size: 1.4rem; color: #4ade80; font-weight: bold; }
+
+/* Секції форми */
+.form-section {
+  background: rgba(30, 41, 59, 0.6); /* Темний напівпрозорий фон */
+  padding: 25px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.form-section h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+  color: #e2e8f0;
+}
+
+.form-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+}
+
+@media (max-width: 600px) {
+  .form-row { flex-direction: column; gap: 15px; }
+}
+
+.field {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.field label {
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+  color: #94a3b8; /* Світло-сірий для підписів */
+}
+
+/* Стилізація полів вводу під темну тему */
+input, select {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.2); /* Темний фон інпуту */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  transition: 0.3s;
+}
+
+input::placeholder { color: rgba(255, 255, 255, 0.3); }
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #6366f1;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Select option fix for dark mode (options often stay white) */
+select option {
+  background: #1e293b;
+  color: white;
+}
+
+/* Кнопка підтвердження */
+.confirm-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin-top: 10px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(99, 102, 241, 0.4);
+}
+
+.confirm-btn:disabled {
+  background: #475569;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Спіннер */
+.spinner {
+  border: 4px solid rgba(255,255,255,0.1);
+  border-top: 4px solid #6366f1;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 </style>

@@ -36,15 +36,6 @@ public class Users {
 
     private String phone;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UserPreferences> preferences;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Recommendation> recommendations;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<UserActivity> activities;
-
     private String securityWord;
 
     @Column(name = "reset_token")

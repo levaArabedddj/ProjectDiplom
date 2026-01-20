@@ -30,7 +30,6 @@ public class MyUserDetailsService implements UserDetailsService {
     }
 
 
-
     /** Если есть пользователь с таким email (gmail), возвращаем его, иначе создаём новый. */
     @Transactional
     public Users findOrCreateByEmail(String email) {
