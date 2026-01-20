@@ -44,18 +44,16 @@ jobs:
           script: |
             cd /root/Java-jar-files/
             
-            echo "📂 Файлы в папке:"
-            ls -la
-            
+            echo 
             rm -f app.jar
             mv *.jar app.jar
             
             echo 
-            docker stop java-backend || true
-            docker rm java-backend || true
+            docker rm -f $(docker ps -a -q --filter name=backend) || true
+            docker rm -f java-backend || true
             
             echo 
             docker-compose up -d --build backend
             
-            docker image prune -f
+
             
