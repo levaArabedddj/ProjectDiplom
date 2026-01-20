@@ -44,16 +44,18 @@ jobs:
           script: |
             cd /root/Java-jar-files/
             
-            echo "📂 Проверяем файлы в папке:"
+            echo "📂 Файлы в папке:"
             ls -la
             
-            # 1. Удаляем старый app.jar, чтобы не было конфликта
             rm -f app.jar
-            
-            # 2. Теперь переименовываем новый файл (он там будет один)
             mv *.jar app.jar
             
-            echo "🚀 Обновляем Backend..."
-            # 3. Запускаем (УБРАЛ ТОЧКУ В КОНЦЕ)
+            echo 
+            docker stop java-backend || true
+            docker rm java-backend || true
+            
+            echo 
             docker-compose up -d --build backend
+            
+            docker image prune -f
             
