@@ -133,7 +133,7 @@ public class SecurityConfig {
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(authorizeRequests ->authorizeRequests
                         .requestMatchers("/auth/**", "/api/auth/**","/oauth2/**", "/login/oauth2/**",
-                                "/oauth2/authorization/**", "/actuator", "/auth/signup-Login").permitAll()
+                                "/oauth2/authorization/**", "/actuator/**", "/auth/signup-Login").permitAll()
                         .requestMatchers(EndpointRequest.toAnyEndpoint()).permitAll()
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/secured/user").fullyAuthenticated()
