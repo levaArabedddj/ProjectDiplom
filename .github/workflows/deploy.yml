@@ -33,7 +33,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}-
           source: "BackendSpring/target/*.jar"
-          target: "/home/root/Java-jar-files/"
+          target: "/root/Java-jar-files/"
           strip_components: 2
 
       - name: Restart Docker Container
@@ -43,7 +43,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /home/root/Java-jar-files/
+            cd /root/Java-jar-files/
             
             # Переименовываем (тут всё по-старому)
             mv *.jar app.jar
