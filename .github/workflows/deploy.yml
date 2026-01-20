@@ -5,7 +5,7 @@ on:
     branches: [ "master" ]
     paths:
       - 'BackendSpring/**'
-      - '.github/workflows/deploy.yml'
+      - 'deploy.yml'
 
 jobs:
   build-and-deploy:
