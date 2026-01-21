@@ -3,43 +3,42 @@
     <div class="auth-card">
       <span class="emoji">🧳</span>
 
-      <h2 class="title">Создай аккаунт</h2>
+      <h2 class="title">Створи акаунт</h2>
       <p class="subtitle">
-        Один шаг — и мы начнём помогать тебе планировать путешествия
+        Один крок — і ми почнемо допомагати тобі планувати подорожі
       </p>
 
       <form @submit.prevent="handleRegister" class="form">
-        <FormKit type="text" label="Username" v-model="userName" validation="required" />
-        <FormKit type="text" label="Имя" v-model="name" validation="required" />
-        <FormKit type="text" label="Фамилия" v-model="surName" validation="required" />
+        <FormKit type="text" label="Ім'я користувача" v-model="userName" validation="required" />
+        <FormKit type="text" label="Ім'я" v-model="name" validation="required" />
+        <FormKit type="text" label="Прізвище" v-model="surName" validation="required" />
         <FormKit type="email" label="Email" v-model="gmail" validation="required|email" />
         <FormKit type="password" label="Пароль" v-model="password" validation="required" />
 
         <FormKit
             type="select"
-            label="Пол"
+            label="Стать"
             v-model="gender"
             :options="[
-            { label: 'Мужчина', value: 'male' },
-            { label: 'Женщина', value: 'female' },
-            { label: 'Небинарный', value: 'non_binary' }
+            { label: 'Чоловік', value: 'male' },
+            { label: 'Жінка', value: 'female' },
           ]"
             validation="required"
         />
 
         <FormKit type="text" label="Телефон" v-model="phone" validation="required" />
-        <FormKit type="password" label="Секретное слово" v-model="securityWord" validation="required" />
+        <FormKit type="password" label="Секретне слово" v-model="securityWord" validation="required" />
 
         <button class="btn primary" :disabled="store.loading">
-          Создать аккаунт
+          Створити акаунт
         </button>
       </form>
 
       <p v-if="store.error" class="error">{{ store.error }}</p>
 
       <p class="hint">
-        Уже есть аккаунт?
-        <router-link to="/login">Войти</router-link>
+        Вже є акаунт?
+        <router-link to="/login">Увійти</router-link>
       </p>
     </div>
   </div>
@@ -54,7 +53,6 @@ import { useRouter } from 'vue-router'
 const store = useUserStore()
 const router = useRouter()
 
-// Все поля из SignupRequest
 const userName = ref("")
 const name = ref("")
 const surName = ref("")
@@ -132,7 +130,6 @@ async function handleRegister() {
   gap: 14px;
 }
 
-/* кнопка */
 .btn {
   margin-top: 20px;
   padding: 14px;
