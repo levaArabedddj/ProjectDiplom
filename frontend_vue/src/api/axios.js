@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: "https//triplevad.duckdns.org/api",
+    baseURL: "https://triplevad.duckdns.org/api",
     withCredentials: false,
 });
 
