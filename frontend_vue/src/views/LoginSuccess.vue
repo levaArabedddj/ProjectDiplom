@@ -22,7 +22,7 @@ onMounted(() => {
 
     store.fetchUser()
 
-    router.push('/suggestions')
+    router.push('/questionnaire')
   } else {
     console.error('Токен не знайдено в URL')
     router.push('/login')
