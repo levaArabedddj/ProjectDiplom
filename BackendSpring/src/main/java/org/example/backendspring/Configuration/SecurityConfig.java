@@ -201,7 +201,7 @@ public class SecurityConfig {
                 String token = jwtCore.generateToken(newAuth);
 
                 // 5. Редірект
-                String frontendUrl = "http://localhost:5173/login-success";
+                String frontendUrl = "https://triplevad.duckdns.org/login-success";
                 String redirectUrl = String.format("%s?token=%s", frontendUrl, token);
 
                 getRedirectStrategy().sendRedirect(req, res, redirectUrl);
