@@ -107,7 +107,7 @@ public class SecurityConfig {
     @Bean
     public UrlBasedCorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfig = new CorsConfiguration();
-        corsConfig.setAllowedOrigins(List.of("http://localhost:5173","https://localhost")); // Разрешённый Origin
+        corsConfig.setAllowedOrigins(List.of("http://localhost:5173","https://localhost"));
         corsConfig.setAllowedOriginPatterns(List.of("http://localhost:*", "https://localhost:*", "https://*.trycloudflare.com", "https://stadium-motivation-postcards-nodes.trycloudflare.com", "https://levchatproject.duckdns.org","https://triplevad.duckdns.org"));
         corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         corsConfig.setAllowedHeaders(List.of("Authorization", "Content-Type"));

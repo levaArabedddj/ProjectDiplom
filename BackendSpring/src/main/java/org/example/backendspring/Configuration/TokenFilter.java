@@ -48,8 +48,8 @@ public class TokenFilter extends OncePerRequestFilter {
                 path.startsWith("/auth/") ||
                 path.startsWith("/signup-Login")||
                 path.startsWith("/oauth2/") ||
-                path.startsWith("/api/login/oauth2/") || // ✅ ДОБАВИЛ
-                path.startsWith("/api/oauth2/") ||      // ✅ ДОБАВИЛ
+                path.startsWith("/api/login/oauth2/") ||
+                path.startsWith("/api/oauth2/") ||
                 path.startsWith("/login/oauth2/") ||
                 path.contains("/actuator") ||
                 "OPTIONS".equalsIgnoreCase(request.getMethod())) {
