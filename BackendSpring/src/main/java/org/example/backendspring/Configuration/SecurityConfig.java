@@ -122,6 +122,7 @@ public class SecurityConfig {
         return new CorsFilter(corsConfigurationSource());
     }
 
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,AuthenticationSuccessHandler oAuth2SuccessHandler,
                                             AuthenticationFailureHandler oAuth2FailureHandler,

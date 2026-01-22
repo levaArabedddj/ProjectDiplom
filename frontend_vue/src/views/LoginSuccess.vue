@@ -8,7 +8,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { useUserStore } from '../stores/user' // Импортируем твой стор
+import { useUserStore } from '../stores/user'
 
 const router = useRouter()
 const route = useRoute()
@@ -22,9 +22,8 @@ onMounted(() => {
 
     store.fetchUser()
 
-    router.push('/home')
+    router.push('/suggestions')
   } else {
-    // Если токена нет — кидаем обратно на логин
     console.error('Токен не знайдено в URL')
     router.push('/login')
   }
