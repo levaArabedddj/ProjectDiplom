@@ -19,4 +19,5 @@ public interface UserAIPreferenceRepository extends JpaRepository<UserAIPreferen
     List<UserAIPreference> findByUser(Users user);
 
     @Query("select p from UserAIPreference p where p.user.user_id = :userId")
-    List<UserAIPreference> findAllByUserId(@Param("userId") Long userId);    }
+    List<UserAIPreference> findAllByUserId(@Param("userId") Long userId);
+}

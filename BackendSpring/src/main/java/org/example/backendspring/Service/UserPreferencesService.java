@@ -166,4 +166,7 @@ public class UserPreferencesService {
     }
 
 
+    public Boolean alreadyPreferencesUser(Long userId) {
+        return  userPreferencesRepository.checkIfExists(userId);
+    }
 }

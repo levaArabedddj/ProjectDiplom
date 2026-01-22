@@ -6,23 +6,42 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../stores/user'
+import api from '@/api/axios'
 
 const router = useRouter()
 const route = useRoute()
 const store = useUserStore()
 
-onMounted(() => {
+const statusText = ref('Авторизація через Google...')
+
+onMounted(async () => {
   const token = route.query.token
 
   if (token) {
-    store.setToken(token)
+    try {
+      store.setToken(token)
 
-    store.fetchUser()
+      statusText.value = 'Перевіряємо ваші дані...'
 
-    router.push('/questionnaire')
+      await store.fetchUser()
+
+      const response = await api.get('/api/preferences/status')
+      const isQuestionnaireFilled = response.data
+
+      if (isQuestionnaireFilled) {
+        router.push('/home')
+      } else {
+        console.log('Анкети немає, йдемо заповнювати')
+        router.push('/questionnaire')
+      }
+
+    } catch (e) {
+      console.error('Помилка при вході:', e)
+      router.push('/questionnaire')
+    }
   } else {
     console.error('Токен не знайдено в URL')
     router.push('/login')

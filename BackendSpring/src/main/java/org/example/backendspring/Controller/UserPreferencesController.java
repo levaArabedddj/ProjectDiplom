@@ -183,6 +183,10 @@ public class UserPreferencesController {
         return openAIService.getAIRecommendationsForUser(userDetails.getUser_id());
     }
 
+    @GetMapping("/status")
+    public Boolean alreadyUserPreferences(@AuthenticationPrincipal MyUserDetails userDetails){
+        return userPreferencesService.alreadyPreferencesUser(userDetails.getUser_id());
+    }
 
 
 
