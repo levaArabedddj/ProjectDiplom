@@ -19,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -132,8 +133,16 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(authorizeRequests ->authorizeRequests
-                        .requestMatchers("/auth/**", "/api/auth/**","/oauth2/**", "/login/oauth2/**",
-                                "/oauth2/authorization/**", "/actuator/**", "/auth/signup-Login").permitAll()
+                        .requestMatchers("/api/auth/**",
+
+                                "/api/oauth2/**",
+                                "/api/login/oauth2/**",
+                                "/oauth2/authorization/**",
+                                "/oauth2/**",
+                                "/login/oauth2/**"
+                                 ,"/actuator/**",
+                                "/api/login/**",
+                                "/api/auth/signup-Login").permitAll()
                         .requestMatchers(EndpointRequest.toAnyEndpoint()).permitAll()
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/secured/user").fullyAuthenticated()
@@ -142,6 +151,13 @@ public class SecurityConfig {
                 )
 
                 .oauth2Login(oauth2 -> oauth2
+
+                        .authorizationEndpoint(auth -> auth
+                                .baseUri("/api/oauth2/authorization")
+                        )
+                        .redirectionEndpoint(endpoint -> endpoint
+                                .baseUri("/api/login/oauth2/code/*")
+                        )
                         .userInfoEndpoint(ui -> ui
                                 .oidcUserService(oidcUserService)
                         )
@@ -155,8 +171,6 @@ public class SecurityConfig {
         return http.build();
     }
 
-
-
     @Bean
     public AuthenticationSuccessHandler oAuth2SuccessHandler(JwtCore jwtCore) {
         return new SimpleUrlAuthenticationSuccessHandler() {
@@ -167,47 +181,85 @@ public class SecurityConfig {
                     HttpServletResponse res,
                     Authentication auth) throws IOException {
 
-                // 1) Извлечь OIDC-пользователя
                 DefaultOidcUser oidcUser = (DefaultOidcUser) auth.getPrincipal();
-
-                // 2) Достать email
                 String email = oidcUser.getEmail();
 
-                // 3) Найти или создать  юзера через сервис
+                // 1. Знаходимо юзера в базі
                 Users dbUser = uds.findOrCreateByEmail(email);
 
-                // 4) Собрать MyUserDetails
+                // 2. Створюємо UserDetails
                 MyUserDetails userDetails = MyUserDetails.build(dbUser);
 
-                // 5) Генерировать токен из деталей
-                String token = jwtCore.generateToken((Authentication) userDetails);
+                // 3. 👇 ВИПРАВЛЕННЯ: Створюємо правильний об'єкт Authentication
+                Authentication newAuth = new UsernamePasswordAuthenticationToken(
+                        userDetails,
+                        null,
+                        userDetails.getAuthorities()
+                );
 
-                // (Опционально) Вытянуть Google-access-token, если нужен
-                OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) auth;
-                OAuth2AuthorizedClient client = authorizedClientService
-                        .loadAuthorizedClient(
-                                oauthToken.getAuthorizedClientRegistrationId(),
-                                oauthToken.getName());
-                String googleAccessToken = client.getAccessToken().getTokenValue();
+                // 4. Генеруємо токен (передаємо newAuth, а не userDetails)
+                String token = jwtCore.generateToken(newAuth);
 
+                // 5. Редірект
+                String frontendUrl = "http://localhost:5173/login-success";
+                String redirectUrl = String.format("%s?token=%s", frontendUrl, token);
 
-                log.info("Generated application JWT: {}", token);
-
-                // Кладём JWT в заголовок ответа
-                res.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
-
-                // Отдаём JSON-ответ
-                res.setStatus(HttpStatus.OK.value());
-                res.setContentType(MediaType.APPLICATION_JSON_VALUE);
-                res.getWriter().write("""
-                {
-                  "token":"%s",
-                  "google_access_token":"%s"
-                }
-                """.formatted(token, googleAccessToken));
+                getRedirectStrategy().sendRedirect(req, res, redirectUrl);
             }
         };
     }
+
+//    @Bean
+//    public AuthenticationSuccessHandler oAuth2SuccessHandler(JwtCore jwtCore) {
+//        return new SimpleUrlAuthenticationSuccessHandler() {
+//
+//            @Override
+//            public void onAuthenticationSuccess(
+//                    HttpServletRequest req,
+//                    HttpServletResponse res,
+//                    Authentication auth) throws IOException {
+//
+//                // 1) Извлечь OIDC-пользователя
+//                DefaultOidcUser oidcUser = (DefaultOidcUser) auth.getPrincipal();
+//
+//                // 2) Достать email
+//                String email = oidcUser.getEmail();
+//
+//                // 3) Найти или создать  юзера через сервис
+//                Users dbUser = uds.findOrCreateByEmail(email);
+//
+//                // 4) Собрать MyUserDetails
+//                MyUserDetails userDetails = MyUserDetails.build(dbUser);
+//
+//                // 5) Генерировать токен из деталей
+//                String token = jwtCore.generateToken((Authentication) userDetails);
+//
+//                // (Опционально) Вытянуть Google-access-token, если нужен
+//                OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) auth;
+//                OAuth2AuthorizedClient client = authorizedClientService
+//                        .loadAuthorizedClient(
+//                                oauthToken.getAuthorizedClientRegistrationId(),
+//                                oauthToken.getName());
+//                String googleAccessToken = client.getAccessToken().getTokenValue();
+//
+//
+//                log.info("Generated application JWT: {}", token);
+//
+//                // Кладём JWT в заголовок ответа
+//                res.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token);
+//
+//                // Отдаём JSON-ответ
+//                res.setStatus(HttpStatus.OK.value());
+//                res.setContentType(MediaType.APPLICATION_JSON_VALUE);
+//                res.getWriter().write("""
+//                {
+//                  "token":"%s",
+//                  "google_access_token":"%s"
+//                }
+//                """.formatted(token, googleAccessToken));
+//            }
+//        };
+//    }
 
 
 

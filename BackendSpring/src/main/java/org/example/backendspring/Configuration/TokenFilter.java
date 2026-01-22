@@ -45,8 +45,11 @@ public class TokenFilter extends OncePerRequestFilter {
         long startTime = System.currentTimeMillis();
         String path = request.getRequestURI();
         if (path.startsWith("/api/auth/")||
-                path.startsWith("/auth/") || path.startsWith("/signup-Login")||
+                path.startsWith("/auth/") ||
+                path.startsWith("/signup-Login")||
                 path.startsWith("/oauth2/") ||
+                path.startsWith("/api/login/oauth2/") || // ✅ ДОБАВИЛ
+                path.startsWith("/api/oauth2/") ||      // ✅ ДОБАВИЛ
                 path.startsWith("/login/oauth2/") ||
                 path.contains("/actuator") ||
                 "OPTIONS".equalsIgnoreCase(request.getMethod())) {
