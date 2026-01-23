@@ -25,5 +25,11 @@ public class TripDto {
     private List<FlightResponseTrip> bookings;
     private List<HotelDto> hotels;
     private List<PlaceCartDto> placesToVisit;
+
+    public TripDto(Long id, String cityName, LocalDate startDate) {
+        this.id = id;
+        this.cityName = cityName;
+        this.startDate = startDate;
+    }
 }
 

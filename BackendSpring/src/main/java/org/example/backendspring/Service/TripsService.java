@@ -32,6 +32,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -173,9 +174,6 @@ public class TripsService {
         }
     }
 
-
-
-
     // 4. получить все поездки нашего юзера
     public List<TripDto> getAllTrips(Long userId) {
         List<Trip> tripList = tripsRepo.findAllByUserId(userId);
@@ -186,6 +184,11 @@ public class TripsService {
                 .startDate(dto.getStartDate()).
                         build()
         ).collect(Collectors.toList());
+    }
+
+    //4.1 получить все поездки облегченний вариант
+    public List<TripDto> getAllTripsNew(Long userId) {
+        return tripsRepo.findAllByUserIdNew(userId);
     }
 
     // 5. добавить интересное место в эту поездку

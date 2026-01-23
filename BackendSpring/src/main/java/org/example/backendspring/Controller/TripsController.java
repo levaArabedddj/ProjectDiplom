@@ -54,6 +54,10 @@ public class TripsController {
     public List<TripDto> getAllTrips(@AuthenticationPrincipal MyUserDetails user) {
        return tripsService.getAllTrips(user.getUser_id());
     }
+    @GetMapping("/all")
+    public List<TripDto> getAllTripsNew(@AuthenticationPrincipal MyUserDetails user) {
+        return tripsService.getAllTripsNew(user.getUser_id());
+    }
 
     @GetMapping("/{tripId}")
     public TripDto getTripById(@PathVariable("tripId") Long tripId,
