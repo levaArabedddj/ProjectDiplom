@@ -176,7 +176,7 @@ function toggleNotification() {
 }
 async function fetchNotification() {
   try {
-    const res = await api.get("/notifications/latest");
+    const res = await api.get("/api/notifications/latest");
     notification.value = res.data;
   } catch (err) {
     console.warn("Уведомлений нет", err);
@@ -186,7 +186,7 @@ async function fetchNotification() {
 const securityStatus = ref(null);
 async function fetchSecurityStatus() {
   try {
-    const res = await api.get("/me/security-status");
+    const res = await api.get("/auth/me/security-status");
     securityStatus.value = res.data;
   } catch (err) {
     console.error("Помилка перевірки безпеки:", err);
