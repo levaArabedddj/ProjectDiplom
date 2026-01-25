@@ -12,7 +12,7 @@
         <div class="container">
           <div class="top-content">
             <div class="user">
-              <img src="/placeholder.png" class="avatar" />
+              <img src="/placeholder.png" class="avatar" alt="User Avatar" />
               <div class="user-text">
                 <h2>{{ user.name }} {{ user.surname }}</h2>
                 <p>@{{ user.userName }}</p>
