@@ -186,7 +186,7 @@ async function fetchNotification() {
 const securityStatus = ref(null);
 async function fetchSecurityStatus() {
   try {
-    const res = await api.get("/users/me/security-status");
+    const res = await api.get("/me/security-status");
     securityStatus.value = res.data;
   } catch (err) {
     console.error("Помилка перевірки безпеки:", err);
