@@ -232,18 +232,14 @@ public class TripsService {
 
     // 6. получить все интересные места нашего юзера (кратко)
     public List<PlaceToVisitDto> getPlacesForTrip(Long tripId, Long userId) throws AccessDeniedException {
-        Trip trip = tripsRepo.findById(tripId)
-                .orElseThrow(() -> new RuntimeException("Trip not found: " + tripId));
 
-        if (!trip.getUser().getUser_id().equals(userId)) {
-            throw new AccessDeniedException("Trip does not belong to user");
+        boolean isOwner = placeVisitRepo.existsByIdAndUser_UserId(tripId, userId);
+
+        if (!isOwner) {
+            throw new AccessDeniedException("Trip not found or access denied");
         }
 
-        List<PlaceToVisitTrips> places = placeVisitRepo.findAllByTripId(tripId);
-
-        return places.stream()
-                .map(p -> new PlaceToVisitDto(p.getId(), p.getName()))
-                .collect(Collectors.toList());
+        return placeVisitRepo.findDtosByTripId(tripId);
     }
 
     // 7. получить все детали одного интересного места

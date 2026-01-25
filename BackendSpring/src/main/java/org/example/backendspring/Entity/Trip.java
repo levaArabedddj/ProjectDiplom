@@ -36,12 +36,8 @@ public class Trip {
     @JoinColumn(name = "user_id")
     private Users user;
 
-
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
     private List<Booking> bookings = new ArrayList<>();
-
-
-
 
     @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL)
     private List<Note> notes = new ArrayList<>();

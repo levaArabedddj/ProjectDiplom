@@ -66,7 +66,7 @@ const isDeleting = ref(false)
 
 onMounted(async () => {
   try {
-    const response = await api.get('/api/trips')
+    const response = await api.get('/api/trips/all')
     trips.value = response.data
   } catch (error) {
     console.error("Помилка завантаження подорожей:", error)
