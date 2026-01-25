@@ -46,11 +46,12 @@ public class SecurityController {
     private AuthenticationManager authenticationManager;
     private JwtCore jwtCore;
     private final static Logger log = LoggerFactory.getLogger(SecurityController.class);
-    private VerificationTokenRepo verificationTokenRepo;
+    private final VerificationTokenRepo verificationTokenRepo;
     private final MailService mailSender;
 
     @Autowired
-    public SecurityController(MailService mailSender) {
+    public SecurityController(VerificationTokenRepo verificationTokenRepo, MailService mailSender) {
+        this.verificationTokenRepo = verificationTokenRepo;
         this.mailSender = mailSender;
     }
 
