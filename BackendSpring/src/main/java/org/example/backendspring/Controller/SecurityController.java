@@ -3,8 +3,10 @@ package org.example.backendspring.Controller;
 
 import jakarta.transaction.Transactional;
 import org.example.backendspring.Configuration.JwtCore;
+import org.example.backendspring.Configuration.MyUserDetails;
 import org.example.backendspring.Configuration.SigninRequest;
 import org.example.backendspring.Configuration.SignupRequest;
+import org.example.backendspring.Dto.SecurityStatusDto;
 import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Enun.UserRole;
 import org.example.backendspring.Repository.UsersRepo;
@@ -17,6 +19,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -134,6 +137,18 @@ public class SecurityController {
         }
         // fallback — просто имя из токена
         return ResponseEntity.ok(Map.of("username", authentication.getName()));
+    }
+
+    @GetMapping("/me/security-status")
+    public ResponseEntity<SecurityStatusDto> getSecurityStatus(@AuthenticationPrincipal MyUserDetails currentUser) {
+        // Получаем свежего юзера из базы, чтобы данные были актуальны
+        Users user = usersRepo.findById(currentUser.getUser_id())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean hasPassword = user.getPassword() != null && !user.getPassword().isEmpty();
+        boolean hasSecretPhrase = user.getSecurityWord() != null && !user.getSecurityWord().isEmpty();
+
+        return ResponseEntity.ok(new SecurityStatusDto(hasPassword, hasSecretPhrase));
     }
 
 

@@ -91,6 +91,26 @@
             </a>
           </section>
 
+          <section v-if="securityStatus && (!securityStatus.hasPassword || !securityStatus.hasSecretPhrase)" class="glass-card danger center">
+            <h3>⚠️ Безпека акаунту</h3>
+            <p style="margin-bottom: 15px; opacity: 0.9;">
+              Для повноцінного захисту та входу через Telegram/Login, будь ласка, налаштуйте:
+            </p>
+
+            <div v-if="!securityStatus.hasPassword" style="margin-bottom: 12px;">
+              <span>❌ Пароль не встановлено</span>
+              <button class="btn-warning" @click="openSetPasswordModal">
+                Встановити пароль
+              </button>
+            </div>
+
+            <div v-if="!securityStatus.hasSecretPhrase">
+              <span>❌ Секретна фраза відсутня</span>
+              <button class="btn-warning" @click="openSetSecretPhraseModal">
+                Встановити фразу
+              </button>
+            </div>
+          </section>
           <!-- Navigation -->
           <section class="glass-card center">
             <h3>Навігація</h3>
@@ -101,6 +121,7 @@
             </button>
           </section>
 
+
           <!-- Logout -->
           <section class="glass-card center danger">
             <h3>Обліковий запис</h3>
@@ -110,6 +131,7 @@
               Вийти
             </button>
           </section>
+
         </div>
       </main>
     </template>
@@ -161,10 +183,29 @@ async function fetchNotification() {
     notification.value = null;
   }
 }
+const securityStatus = ref(null);
+async function fetchSecurityStatus() {
+  try {
+    const res = await api.get("/users/me/security-status");
+    securityStatus.value = res.data;
+  } catch (err) {
+    console.error("Помилка перевірки безпеки:", err);
+  }
+}
 
+function openSetPasswordModal() {
+  router.push('/settings/security');
+  alert("Тут має відкритись форма встановлення пароля");
+}
+
+function openSetSecretPhraseModal() {
+  router.push('/settings/security');
+  alert("Тут має відкритись форма встановлення секретної фрази");
+}
 onMounted(() => {
   store.fetchUser();
   fetchNotification();
+  fetchSecurityStatus();
 });
 </script>
 
@@ -323,6 +364,25 @@ onMounted(() => {
     flex-direction: column;
     gap: 16px;
   }
+}
+
+.btn-warning {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  background: rgba(245, 158, 11, 0.9); /* Желто-оранжевый */
+  color: white;
+  border-radius: 10px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-warning:hover {
+  background: #d97706;
+  transform: translateY(-1px);
 }
 
 </style>
