@@ -99,15 +99,15 @@
 
             <div v-if="!securityStatus.hasPassword" style="margin-bottom: 12px;">
               <span>❌ Пароль не встановлено</span>
-              <button class="btn-warning" @click="openSetPasswordModal">
-                Встановити пароль
+              <button class="btn-warning" @click="requestSetup('PASSWORD')">
+                Надіслати посилання для створення пароля
               </button>
             </div>
 
             <div v-if="!securityStatus.hasSecretPhrase">
               <span>❌ Секретна фраза відсутня</span>
-              <button class="btn-warning" @click="openSetSecretPhraseModal">
-                Встановити фразу
+              <button class="btn-warning" @click="requestSetup('SECRET')">
+                Надіслати посилання для секретної фрази
               </button>
             </div>
           </section>
@@ -193,15 +193,15 @@ async function fetchSecurityStatus() {
   }
 }
 
-function openSetPasswordModal() {
-  router.push('/settings/security');
-  alert("Тут має відкритись форма встановлення пароля");
+async function requestSetup(type) {
+  try {
+    await api.post("/auth/me/request-setup", { type });
+    alert("Посилання відправлено на вашу пошту! (Дивись консоль сервера)");
+  } catch (e) {
+    alert("Помилка відправки");
+  }
 }
 
-function openSetSecretPhraseModal() {
-  router.push('/settings/security');
-  alert("Тут має відкритись форма встановлення секретної фрази");
-}
 onMounted(() => {
   store.fetchUser();
   fetchNotification();

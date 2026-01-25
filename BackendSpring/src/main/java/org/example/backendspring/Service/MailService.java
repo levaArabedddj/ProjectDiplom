@@ -46,6 +46,49 @@ public class MailService {
         }
     }
 
+    public void sendSetupEmail(String to, String name, String link, String type) {
+        try {
+            String subject;
+            String actionName;
+
+            if ("PASSWORD".equals(type)) {
+                subject = "Встановлення пароля | Travel App";
+                actionName = "встановити новий пароль";
+            } else {
+                subject = "Секретна фраза | Travel App";
+                actionName = "зберегти секретну фразу";
+            }
+
+            // Красивый HTML
+            StringBuilder sb = new StringBuilder();
+            sb.append("<div style='font-family: Arial, sans-serif; color: #333;'>");
+            sb.append("<h2>Вітаємо, ").append(name).append("!</h2>");
+            sb.append("<p>Ви (або хтось від вашого імені) зробили запит, щоб <b>").append(actionName).append("</b>.</p>");
+            sb.append("<p>Для продовження натисніть на кнопку нижче:</p>");
+
+            sb.append("<a href='").append(link).append("' style='");
+            sb.append("background-color: #646cff; color: white; padding: 12px 24px; ");
+            sb.append("text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;");
+            sb.append("'>Перейти до налаштувань</a>");
+
+            sb.append("<p style='margin-top: 20px; font-size: 12px; color: #777;'>");
+            sb.append("Посилання дійсне протягом 15 хвилин.<br>");
+            sb.append("Якщо ви не робили цей запит, просто ігноруйте цей лист.");
+            sb.append("</p></div>");
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(to);
+            helper.setSubject(subject);
+            helper.setText(sb.toString(), true); // true = HTML
+
+            mailSender.send(message);
+        } catch (Exception e) {
+            // Логируем ошибку, но не роняем приложение, если почта не ушла (или роняем, если критично)
+            e.printStackTrace();
+            throw new RuntimeException("Не вдалося відправити лист на " + to, e);
+        }
+    }
 
 
 

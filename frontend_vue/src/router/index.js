@@ -20,7 +20,7 @@ import MyFlights from "@/views/MyFlights.vue";
 import FlightBookingDetails from "@/views/FlightBookingDetails.vue";
 import SearchHotels from "@/views/SearchHotels.vue";
 import LoginSuccess from "@/views/LoginSuccess.vue";
-
+import SetapPage from "@/views/SetupPage.vue"
 
 
 const routes = [
@@ -140,6 +140,11 @@ const routes = [
         path: '/login-success',
         name: 'LoginSuccess',
         component: LoginSuccess,
+    },
+    {
+        path: '/setup',
+        name: 'SetapPage',
+        component: SetapPage
     }
 
 ]
