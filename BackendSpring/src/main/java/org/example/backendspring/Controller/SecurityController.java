@@ -123,11 +123,6 @@ public class SecurityController {
 
 
         try {
-
-
-            System.out.println(user);
-           // emailService.sendRegistrationEmail(user.getGmail(), user.getUserName());
-
             // Автоматична авторизація
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(signupRequest.getUserName(), signupRequest.getPassword()));
@@ -155,7 +150,6 @@ public class SecurityController {
 
     @GetMapping("/me/security-status")
     public ResponseEntity<SecurityStatusDto> getSecurityStatus(@AuthenticationPrincipal MyUserDetails currentUser) {
-        // Получаем свежего юзера из базы, чтобы данные были актуальны
         Users user = usersRepo.findById(currentUser.getUser_id())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -193,7 +187,7 @@ public class SecurityController {
     @PostMapping("/public/finish-setup")
     public ResponseEntity<?> finishSetup(@RequestBody Map<String, String> payload) {
         String tokenStr = payload.get("token");
-        String value = payload.get("value"); // Новый пароль или фраза
+        String value = payload.get("value");
 
         VerificationToken token = verificationTokenRepo.findByToken(tokenStr)
                 .orElseThrow(() -> new RuntimeException("Invalid token"));

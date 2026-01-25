@@ -43,7 +43,9 @@ public class MyUserDetailsService implements UserDetailsService {
                     Users newUser = new Users();
                     newUser.setGmail(email);
                     newUser.setUserName(username);
-                    newUser.setPassword("");                  // OAuth-пользователь
+                    newUser.setPassword("");         // OAuth-пользователь
+                    newUser.setName(givenName);
+                    newUser.setSurname(familyName);
                     newUser.setRole(UserRole.user);
                     Users savedUser = usersRepo.save(newUser);
                     return savedUser;

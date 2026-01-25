@@ -65,10 +65,7 @@ public class TokenFilter extends OncePerRequestFilter {
                 return;
             }
 
-
             String token = header.substring(7);
-
-            System.out.println("читаем токен");
             // Проверка токена
             if (!jwtCore.isValidToken(token)) {
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");

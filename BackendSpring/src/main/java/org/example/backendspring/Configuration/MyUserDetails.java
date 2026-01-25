@@ -26,8 +26,6 @@ public class MyUserDetails implements UserDetails, Serializable  {
     private String gmail;
     private String password;
 
-
-
     public static MyUserDetails build(Users user) {
 
         return new MyUserDetails(
