@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/BackendSpring/BackendSpring.iml" filepath="$PROJECT_DIR$/BackendSpring/BackendSpring.iml" />
       <module fileurl="file://$PROJECT_DIR$/ProjectDiplom.iml" filepath="$PROJECT_DIR$/ProjectDiplom.iml" />
       <module fileurl="file://$PROJECT_DIR$/frontend_vue/frontend_vue.iml" filepath="$PROJECT_DIR$/frontend_vue/frontend_vue.iml" />
     </modules>

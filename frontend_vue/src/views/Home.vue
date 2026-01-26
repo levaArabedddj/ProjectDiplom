@@ -63,7 +63,6 @@
       <!-- ===== MAIN CONTENT ===== -->
       <main class="content">
         <div class="container grid">
-          <!-- Personal info -->
           <section class="glass-card">
             <h3>Особисті дані</h3>
             <ul>
@@ -74,66 +73,95 @@
             </ul>
           </section>
 
-          <!-- Telegram -->
           <section class="glass-card center">
             <h3>Telegram-бот</h3>
             <p>
               Керуйте профілем, нагадуваннями та планами подорожей
               через Telegram-бот.
             </p>
-
-            <a
-                :href="telegramLink"
-                target="_blank"
-                class="btn-main"
-            >
+            <a :href="telegramLink" target="_blank" class="btn-main">
               Перейти до Telegram-бота
             </a>
           </section>
 
-          <section v-if="securityStatus && (!securityStatus.hasPassword || !securityStatus.hasSecretPhrase)" class="glass-card danger center">
+          <section v-if="securityStatus && !user.twoFactorEnabled" class="glass-card danger center">
             <h3>⚠️ Безпека акаунту</h3>
-            <p style="margin-bottom: 15px; opacity: 0.9;">
-              Для повноцінного захисту та входу через Telegram/Login, будь ласка, налаштуйте:
-            </p>
 
-            <div v-if="!securityStatus.hasPassword" style="margin-bottom: 12px;">
-              <span>❌ Пароль не встановлено</span>
-              <button class="btn-warning" @click="requestSetup('PASSWORD')">
-                Надіслати посилання для створення пароля
-              </button>
+            <div v-if="!securityStatus.hasPassword || !securityStatus.hasSecretPhrase">
+              <p style="margin-bottom: 15px; opacity: 0.9;">
+                Для повноцінного захисту налаштуйте:
+              </p>
+
+              <div v-if="!securityStatus.hasPassword" style="margin-bottom: 12px;">
+                <span>❌ Пароль не встановлено</span>
+                <button class="btn-warning" @click="requestSetup('PASSWORD')">
+                  Надіслати посилання на пароль
+                </button>
+              </div>
+
+              <div v-if="!securityStatus.hasSecretPhrase" style="margin-bottom: 12px;">
+                <span>❌ Секретна фраза відсутня</span>
+                <button class="btn-warning" @click="requestSetup('SECRET')">
+                  Надіслати посилання на фразу
+                </button>
+              </div>
             </div>
 
-            <div v-if="!securityStatus.hasSecretPhrase">
-              <span>❌ Секретна фраза відсутня</span>
-              <button class="btn-warning" @click="requestSetup('SECRET')">
-                Надіслати посилання для секретної фрази
-              </button>
+            <div style="margin-top: 20px; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 15px;">
+              <div v-if="user.twoFactorEnabled">
+                ✅ <b style="color: #4ade80;">2FA (Google Auth) увімкнено</b>
+              </div>
+              <div v-else>
+                <div style="margin-bottom: 8px;">🛡️ Додатковий захист</div>
+                <button class="btn-main" @click="startSetup" style="width: 100%;">
+                  Підключити 2FA
+                </button>
+              </div>
             </div>
           </section>
-          <!-- Navigation -->
+
+
+
           <section class="glass-card center">
             <h3>Навігація</h3>
             <p>Перейти на головну сторінку</p>
-
             <button class="btn-main" @click="goToMain">
               Головна сторінка
             </button>
           </section>
 
-
-          <!-- Logout -->
           <section class="glass-card center danger">
             <h3>Обліковий запис</h3>
             <p>Вихід з облікового запису</p>
-
             <button class="btn-danger" @click="logout">
               Вийти
             </button>
           </section>
-
         </div>
       </main>
+
+      <div v-if="show2FAModal" class="modal-card">
+        <h3>🔐 Налаштування 2FA</h3>
+        <div v-if="!qrUrl">
+          <p>Завантаження QR-коду...</p>
+        </div>
+        <div v-else>
+          <p>1. Скануйте цей код у Google Authenticator:</p>
+          <qrcode-vue :value="qrUrl" :size="200" level="H" />
+
+          <div style="margin: 15px 0; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
+            <p style="font-size: 12px; opacity: 0.7; margin: 0;">Не сканується? Введіть вручну:</p>
+            <strong style="font-size: 18px; letter-spacing: 2px; color: #4ade80;">{{ manualSecret }}</strong>
+          </div>
+          <p>2. Введіть код із додатка:</p>
+          <input v-model="code" type="number" placeholder="123456" />
+
+          <div style="display: flex; gap: 10px; justify-content: center;">
+            <button @click="show2FAModal = false" style="background: grey;">Скасувати</button>
+            <button @click="confirmSetup">Підтвердити</button>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>
@@ -143,6 +171,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import api from '@/api/axios'
+import QrcodeVue from 'qrcode.vue'
 const showNotification = ref(false);
 
 
@@ -186,7 +215,7 @@ async function fetchNotification() {
 const securityStatus = ref(null);
 async function fetchSecurityStatus() {
   try {
-    const res = await api.get("/auth/me/security-status");
+    const res = await api.get("/me/security-status");
     securityStatus.value = res.data;
   } catch (err) {
     console.error("Помилка перевірки безпеки:", err);
@@ -195,10 +224,41 @@ async function fetchSecurityStatus() {
 
 async function requestSetup(type) {
   try {
-    await api.post("/auth/me/request-setup", { type });
+    await api.post("/me/request-setup", { type });
     alert("Посилання відправлено на вашу пошту! (Дивись консоль сервера)");
   } catch (e) {
     alert("Помилка відправки");
+  }
+}
+
+const qrUrl = ref('')
+const code = ref('')
+const show2FAModal = ref(false)
+
+// Додай нову змінну
+const manualSecret = ref('')
+
+// Онови функцію startSetup
+async function startSetup() {
+  try {
+    const res = await api.get('/me/2fa/setup') // Або твій шлях
+    qrUrl.value = res.data.qrUrl
+    manualSecret.value = res.data.secret // <--- Зберігаємо секрет
+    show2FAModal.value = true
+  } catch (e) {
+    alert("Помилка отримання QR-коду")
+  }
+}
+
+async function confirmSetup() {
+  try {
+    // Используем правильный путь из последнего бэкенда
+    await api.post('/me/2fa/verify', { code: Number(code.value) })
+    alert('2FA успішно активовано!')
+    show2FAModal.value = false
+    store.fetchUser() // Обновляем данные юзера, чтобы кнопка изменилась на "Включено"
+  } catch (e) {
+    alert('Невірний код')
   }
 }
 
@@ -383,6 +443,77 @@ onMounted(() => {
 .btn-warning:hover {
   background: #d97706;
   transform: translateY(-1px);
+}
+
+/* ===== MODAL ===== */
+.modal-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: #1e293b; /* Темний фон */
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+  border: 1px solid rgba(255,255,255,0.1);
+  text-align: center;
+  z-index: 1000;
+  width: 90%;
+  max-width: 400px;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Затемнення фону за модалкою */
+.modal-card::before {
+  content: '';
+  position: fixed;
+  top: -1000px; /* Розтягуємо на весь екран */
+  left: -1000px;
+  right: -1000px;
+  bottom: -1000px;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  z-index: -1; /* Щоб фон був ЗА карткою */
+}
+
+.modal-card h3 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.modal-card input {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  margin: 20px 0;
+  border-radius: 10px;
+  border: 1px solid #475569;
+  background: #0f172a;
+  color: white;
+  font-size: 18px;
+  text-align: center;
+}
+
+.modal-card button {
+  background: #646cff;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 16px;
+  width: 100%;
+}
+
+.modal-card button:hover {
+  background: #535bf2;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, -40%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
 }
 
 </style>

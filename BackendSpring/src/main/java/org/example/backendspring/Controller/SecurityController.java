@@ -13,6 +13,7 @@ import org.example.backendspring.Enun.UserRole;
 import org.example.backendspring.Repository.UsersRepo;
 import org.example.backendspring.Repository.VerificationTokenRepo;
 import org.example.backendspring.Service.MailService;
+import org.example.backendspring.Service.UsersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -41,42 +42,30 @@ import java.util.Map;
 public class SecurityController {
 
 
-    private UsersRepo usersRepo;
-    private PasswordEncoder passwordEncoder;
-    private AuthenticationManager authenticationManager;
-    private JwtCore jwtCore;
+    private final UsersRepo usersRepo;
+    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
+    private final JwtCore jwtCore;
     private final static Logger log = LoggerFactory.getLogger(SecurityController.class);
     private final VerificationTokenRepo verificationTokenRepo;
     private final MailService mailSender;
+    private final UsersService usersService;
 
     @Autowired
-    public SecurityController(VerificationTokenRepo verificationTokenRepo, MailService mailSender) {
+    public SecurityController(UsersRepo usersRepo, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtCore jwtCore, VerificationTokenRepo verificationTokenRepo, MailService mailSender, UsersService usersService) {
+        this.usersRepo = usersRepo;
+        this.passwordEncoder = passwordEncoder;
+        this.authenticationManager = authenticationManager;
+        this.jwtCore = jwtCore;
         this.verificationTokenRepo = verificationTokenRepo;
         this.mailSender = mailSender;
+        this.usersService = usersService;
     }
 
-
-    @Autowired
-    public void setUsersRepo(UsersRepo usersRepo) {
-        this.usersRepo = usersRepo;
-    }
-    @Autowired
-    public void setPasswordEncoder(PasswordEncoder passwordEncoder) {
-        this.passwordEncoder = passwordEncoder;
-    }
-    @Autowired
-    public void setAuthenticationManager(AuthenticationManager authenticationManager) {
-        this.authenticationManager = authenticationManager;
-    }
-    @Autowired
-    public void setJwtCore(JwtCore jwtCore) {
-        this.jwtCore = jwtCore;
-    }
 
 
     @PostMapping("/signin")
     ResponseEntity<?> signup(@RequestBody SigninRequest signinRequest) {
-        log.debug("Signin payload: userName='{}', password='{}'", signinRequest.getUserName(), signinRequest.getPassword());
 
         Authentication authentication = null;
         try {
@@ -86,6 +75,24 @@ public class SecurityController {
 
         } catch (BadCredentialsException e) {
             return new ResponseEntity(e.getMessage(), HttpStatus.UNAUTHORIZED);
+        }
+
+        MyUserDetails userDetails = (MyUserDetails) authentication.getPrincipal();
+        Users user = usersRepo.findById(userDetails.getUser_id()).orElseThrow();
+
+        // ПРОВЕРКА: Если у юзера включена 2FA
+        if (user.isTwoFactorEnabled()) {
+            if (signinRequest.getCode() == null) {
+                // Если кода нет в запросе — возвращаем спец. ошибку "Нужен код"
+                return ResponseEntity.status(403)
+                        .body(Map.of("message", "2FA code required", "requires2fa", true));
+            }
+
+            // Если код есть — проверяем его
+            boolean valid = usersService.isOtpValid(user.getTwoFactorSecret(), signinRequest.getCode());
+            if (!valid) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid 2FA code");
+            }
         }
 
         SecurityContextHolder.getContext().setAuthentication(authentication);
@@ -137,79 +144,6 @@ public class SecurityController {
     }
 
 
-
-    @GetMapping("/user")
-    public ResponseEntity<Map<String, Object>> getCurrentUser(Authentication authentication) {
-        if (authentication.getPrincipal() instanceof OAuth2User oauth2User) {
-            // возвращаем атрибуты, которые прислал Google (sub, email, name и т.п.)
-            return ResponseEntity.ok(oauth2User.getAttributes());
-        }
-        // fallback — просто имя из токена
-        return ResponseEntity.ok(Map.of("username", authentication.getName()));
-    }
-
-    @GetMapping("/me/security-status")
-    public ResponseEntity<SecurityStatusDto> getSecurityStatus(@AuthenticationPrincipal MyUserDetails currentUser) {
-        Users user = usersRepo.findById(currentUser.getUser_id())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        boolean hasPassword = user.getPassword() != null && !user.getPassword().isEmpty();
-        boolean hasSecretPhrase = user.getSecurityWord() != null && !user.getSecurityWord().isEmpty();
-
-        return ResponseEntity.ok(new SecurityStatusDto(hasPassword, hasSecretPhrase));
-    }
-
-    @PostMapping("/me/request-setup")
-    public ResponseEntity<?> requestSetup(@AuthenticationPrincipal MyUserDetails currentUser,
-                                          @RequestBody Map<String, String> payload) {
-
-        String type = payload.get("type");
-        if (type == null || (!type.equals("PASSWORD") && !type.equals("SECRET"))) {
-            return ResponseEntity.badRequest().body("Invalid setup type");
-        }
-
-        Users user = usersRepo.findById(currentUser.getUser_id())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        // 1. Создаем токен
-        VerificationToken token = new VerificationToken(user, type);
-        verificationTokenRepo.save(token);
-
-        // 2. Формируем ссылку (Используем твой реальный домен)
-        String link = "https://triplevad.duckdns.org/setup?token=" + token.getToken() + "&type=" + type;
-
-        mailSender.sendSetupEmail(user.getGmail(), user.getName(), link, type);
-
-        return ResponseEntity.ok("Link sent to " + user.getGmail());
-    }
-
-    // ШАГ 2: Юзер перешел по ссылке и ввел новый пароль
-    @PostMapping("/public/finish-setup")
-    public ResponseEntity<?> finishSetup(@RequestBody Map<String, String> payload) {
-        String tokenStr = payload.get("token");
-        String value = payload.get("value");
-
-        VerificationToken token = verificationTokenRepo.findByToken(tokenStr)
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
-
-        if (token.getExpiryDate().isBefore(LocalDateTime.now())) {
-            return ResponseEntity.badRequest().body("Token expired");
-        }
-
-        Users user = token.getUser();
-
-        if ("PASSWORD".equals(token.getType())) {
-            if (value.length() < 6) return ResponseEntity.badRequest().body("Password too short");
-            user.setPassword(passwordEncoder.encode(value));
-        } else if ("SECRET".equals(token.getType())) {
-            user.setSecurityWord(passwordEncoder.encode(value));
-        }
-
-        usersRepo.save(user);
-        verificationTokenRepo.delete(token); // Удаляем использованный токен
-
-        return ResponseEntity.ok("Updated successfully");
-    }
 
 
 

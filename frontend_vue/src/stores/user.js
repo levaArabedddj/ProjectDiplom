@@ -10,6 +10,8 @@ export const useUserStore = defineStore('user', {
         isAuth: !!localStorage.getItem('jwt'),
         userId: null,
         role: null,
+        loading: false,
+        error: null,
     }),
 
     getters: {
@@ -20,20 +22,27 @@ export const useUserStore = defineStore('user', {
 
     actions: {
         /** 🔓 LOGIN */
-        async login(username, password) {
+        async login(username, password,code = null) {
+            this.loading = true
+            this.error = null
             try {
                 const res = await api.post('/auth/signin', {
                     userName: username,
                     password,
+                    code: code
                 })
 
                 const token = res.data.token || res.data
                 this.setToken(token)
+                await this.fetchUser()
 
                 return true
             } catch (e) {
                 console.error('Login error:', e)
-                return false
+                throw e
+            }
+            finally {
+                this.loading = false
             }
         },
 
@@ -64,8 +73,9 @@ export const useUserStore = defineStore('user', {
 
         /** 👤 ЗАГРУЗКА ПРОФИЛЯ */
         async fetchUser() {
+            if (!this.token) return;
             try {
-                const res = await api.get('/api/preferences/me')
+                const res = await api.get('/me/user')
                 this.user = res.data
             } catch (e) {
                 console.warn('Failed to fetch user:', e)

@@ -6,4 +6,5 @@ import lombok.Data;
 public class SigninRequest {
     private String userName;
     private String password;
+    private Integer code;
 }

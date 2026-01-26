@@ -1,41 +1,78 @@
 <template>
   <div class="auth-page">
     <div class="auth-card">
-      <span class="emoji">🔐</span>
 
-      <h2 class="title">З поверненням!</h2>
-      <p class="subtitle">
-        Увійди в обліковий запис і продовжуй планувати свої подорожі
-      </p>
+      <transition name="slide-fade" mode="out-in">
+        <div v-if="!showTwoFactorForm" key="login-form">
+          <span class="emoji">🔐</span>
+          <h2 class="title">З поверненням!</h2>
+          <p class="subtitle">
+            Увійди в обліковий запис і продовжуй планувати свої подорожі
+          </p>
 
-      <form @submit.prevent="handleLogin" class="form">
-        <FormKit
-            type="text"
-            label="Username"
-            v-model="userName"
-            validation="required"
-        />
+          <form @submit.prevent="handleLogin" class="form">
+            <FormKit
+                type="text"
+                label="Username"
+                v-model="userName"
+                validation="required"
+            />
 
-        <FormKit
-            type="password"
-            label="Пароль"
-            v-model="password"
-            validation="required"
-        />
+            <FormKit
+                type="password"
+                label="Пароль"
+                v-model="password"
+                validation="required"
+            />
 
-        <button class="btn primary" :disabled="store.loading || showOverlay">
-          Увійти
-        </button>
-      </form>
+            <button class="btn primary" :disabled="store.loading || showOverlay">
+              Увійти
+            </button>
+          </form>
 
-      <p v-if="store.error" class="error">
-        {{ store.error }}
-      </p>
+          <p v-if="store.error" class="error">
+            {{ store.error }}
+          </p>
 
-      <p class="hint">
-        Немає акаунту?
-        <router-link to="/register">Створити безкоштовно</router-link>
-      </p>
+          <p class="hint">
+            Немає акаунту?
+            <router-link to="/register">Створити безкоштовно</router-link>
+          </p>
+        </div>
+
+        <div v-else key="2fa-form">
+          <span class="emoji">🛡️</span>
+          <h2 class="title">Перевірка безпеки</h2>
+          <p class="subtitle">
+            Введіть 6-значний код із додатка Google Authenticator
+          </p>
+
+          <form @submit.prevent="handle2FASubmit" class="form">
+            <div class="input-group">
+              <input
+                  type="number"
+                  v-model="twoFactorCode"
+                  class="custom-input center-text"
+                  placeholder="000 000"
+                  autofocus
+              />
+            </div>
+
+            <button class="btn primary" :disabled="store.loading || showOverlay">
+              Підтвердити вхід
+            </button>
+
+            <button type="button" class="btn secondary" @click="showTwoFactorForm = false">
+              Назад
+            </button>
+          </form>
+
+          <p v-if="store.error" class="error">
+            {{ store.error }}
+          </p>
+        </div>
+      </transition>
+
     </div>
 
     <transition name="fade">
@@ -64,13 +101,18 @@ import { useRouter } from 'vue-router'
 const store = useUserStore()
 const router = useRouter()
 
+// Дані форми
 const userName = ref("")
 const password = ref("")
+const twoFactorCode = ref("")
 
+// Стан UI
+const showTwoFactorForm = ref(false) // Перемикач між логіном і 2FA
 const showOverlay = ref(false)
+
+// Анімація тексту завантаження
 const currentMsgIndex = ref(0)
 let msgInterval = null
-
 const messages = [
   "Перевіряємо ваші дані...",
   "Раді бачити вас знову! ✈️",
@@ -82,33 +124,63 @@ function startMsgRotation() {
   currentMsgIndex.value = 0
   msgInterval = setInterval(() => {
     currentMsgIndex.value = (currentMsgIndex.value + 1) % messages.length
-  }, 1500) // Змінюємо текст кожні 1.5 секунди
+  }, 1500)
 }
 
 function stopMsgRotation() {
   if (msgInterval) clearInterval(msgInterval)
 }
 
+// 1. Перший етап: Логін + Пароль
 async function handleLogin() {
   store.error = null
-
   showOverlay.value = true
   startMsgRotation()
 
   try {
-    const [ok] = await Promise.all([
+    // Спробуємо увійти без коду
+    await Promise.all([
       store.login(userName.value, password.value),
-      new Promise(resolve => setTimeout(resolve, 400))
+      new Promise(resolve => setTimeout(resolve, 400)) // Мінімальна затримка для краси
     ])
 
-    if (ok) {
-      router.push("/home")
-    } else {
-      throw new Error("Login failed")
-    }
+    // Якщо успіх (2FA вимкнена) - пускаємо
+    router.push("/home")
+
   } catch (e) {
-    showOverlay.value = false
-    stopMsgRotation()
+    // Якщо помилка
+    if (e.response && e.response.data.requires2fa) {
+      // АГА! Потрібна 2FA.
+      // Прибираємо завантаження і показуємо другу форму
+      showOverlay.value = false
+      stopMsgRotation()
+      showTwoFactorForm.value = true // <--- ПЕРЕМИКАЄМО ЕКРАН
+      store.error = null // Очищаємо помилки
+    } else {
+      // Просто помилка (невірний пароль)
+      showOverlay.value = false
+      stopMsgRotation()
+    }
+  }
+}
+
+// 2. Другий етап: Відправка коду
+async function handle2FASubmit() {
+  if (!twoFactorCode.value) return;
+
+  store.error = null
+  showOverlay.value = true
+  startMsgRotation()
+
+  try {
+    await store.login(userName.value, password.value, Number(twoFactorCode.value));
+
+    router.push("/home");
+  } catch (e) {
+    // Код не підійшов
+    store.error = "Невірний код підтвердження";
+    showOverlay.value = false;
+    stopMsgRotation();
   }
 }
 

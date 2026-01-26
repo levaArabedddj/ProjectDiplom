@@ -147,6 +147,7 @@ public class SecurityConfig {
                         .requestMatchers(EndpointRequest.toAnyEndpoint()).permitAll()
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         .requestMatchers("/secured/user").fullyAuthenticated()
+                        .requestMatchers("/api/auth/me/**").authenticated()
                         .anyRequest().authenticated()
 
                 )
