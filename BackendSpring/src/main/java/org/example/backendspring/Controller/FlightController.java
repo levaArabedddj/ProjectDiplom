@@ -96,17 +96,7 @@ public class FlightController {
         return ResponseEntity.ok(flightService.getBookingDetails(id, user.getUser_id()));
     }
 
-//    @GetMapping("/locations")
-//    public ResponseEntity<JsonNode> getLocations(@RequestParam String keyword) {
-//        try {
-//            // Если keyword слишком короткий, Amadeus может выдать ошибку,
-//            // поэтому на фронте ставим ограничение (минимум 1-2 символа)
-//            JsonNode locations = amadeusService.searchLocations(keyword);
-//            return ResponseEntity.ok(locations.path("data")); // Возвращаем только массив "data"
-//        } catch (Exception e) {
-//            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-//        }
-//    }
+
 
 
 

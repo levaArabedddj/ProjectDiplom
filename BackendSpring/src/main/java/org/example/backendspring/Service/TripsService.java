@@ -3,10 +3,8 @@ package org.example.backendspring.Service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import jakarta.transaction.Transactional;
-import org.example.backendspring.Configuration.MyUserDetails;
-import org.example.backendspring.Dto.DtoAmadeus.Fly.BookingListResponse;
-import org.example.backendspring.Dto.DtoAmadeus.Fly.FlightResponse;
+import org.aspectj.weaver.ast.Not;
+import org.springframework.transaction.annotation.Transactional;
 import org.example.backendspring.Dto.DtoAmadeus.Fly.FlightResponseTrip;
 import org.example.backendspring.Dto.PlaceToVisitDto;
 import org.example.backendspring.Dto.TripAdviceDTO;
@@ -82,19 +80,11 @@ public class TripsService {
 
 
     // 2. Получить данные путешествия по ее идентификатору
+    @Transactional(readOnly = true)
     public TripDto getTripById(Long userId,Long tripId) {
 
-        Users user = usersRepo.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
-
-        // 2. Ищем поездку
-        Trip trip = tripsRepo.findById(tripId)
-                .orElseThrow(() -> new RuntimeException("Поездка не найдена"));
-
-        // 3. Проверяем принадлежность
-        if (!trip.getUser().getUser_id().equals(user.getUser_id())) {
-            throw new RuntimeException("Эта поездка не принадлежит пользователю");
-        }
+        Trip trip = tripsRepo.findByIdAndUserId(tripId,userId).
+                orElseThrow(()-> new RuntimeException("Trip not found or you don't have access in this trip"));
 
         return TripDto.builder()
                 .id(trip.getId())
@@ -103,9 +93,6 @@ public class TripsService {
                 .endDate(trip.getEndDate())
                 .balance(trip.getBalance())
                 .currency(trip.getCurrency())
-//                .placesToVisit(trip.getPlacesToVisit().stream()
-//                        .map(p -> new PlaceCartDto(p.getId(), p.getName(), p.getDescription(),p.getCategory(),p.getAddress(),p.getGeoCoordinates(),p.getEstimatedVisitTime(),p.getPrice(),p.getCurrency(),p.getSource(),p.getIsFavorite()))
-//                        .toList())
                 .bookings(trip.getBookings().stream()
                         .map(b-> new FlightResponseTrip(b.getId(),
                                 b.getFlightNumber(),
@@ -142,7 +129,6 @@ public class TripsService {
                 //  Если Amadeus не нашел город, используем OpenStreetMap (Nominatim)
                 log.warn("Amadeus не знайшов {}, запитуємо Nominatim...", city);
                 String osmUrl = "https://nominatim.openstreetmap.org/search?q=" + city + "&format=json&limit=1";
-                RestTemplate restTemplate = new RestTemplate();
                 JsonNode osmResponse = restTemplate.getForObject(osmUrl, JsonNode.class);
 
                 if (osmResponse != null && !osmResponse.isEmpty()) {
@@ -277,26 +263,11 @@ public class TripsService {
     // 8. удалить интересное место
     @Transactional
     public ResponseEntity<String> deletePlace(Long tripId, Long placeId, Long userId) throws AccessDeniedException {
-
-        PlaceToVisitTrips place = placeVisitRepo.findById(placeId)
-                .orElseThrow(() -> new RuntimeException("Place not found in DB"));
-
-
-        if (!place.getTrip().getId().equals(tripId)) {
-            return ResponseEntity
-                    .status(HttpStatus.BAD_REQUEST)
-                    .body("Place exists, but belongs to another trip");
+        int deleted = placeVisitRepo.deleteByIdAndOwner(placeId, userId);
+        if (deleted == 0) {
+            throw new AccessDeniedException("Place not found or access denied");
         }
-
-        // Проверяем права пользователя (принадлежит ли поездка юзеру)
-        if (!place.getTrip().getUser().getUser_id().equals(userId)) {
-            throw new AccessDeniedException("You do not have permission to delete this place");
-        }
-
-
-        placeVisitRepo.delete(place);
-
-        return ResponseEntity.ok("Place deleted successfully");
+        return ResponseEntity.ok("Deleted");
     }
 
     // 9. Получить все заметки (с проверкой существования поездки)
@@ -315,8 +286,9 @@ public class TripsService {
     }
 
     // 10. Добавить новую заметку
-    public NoteDto addNoteToTrip(Long tripId, String text) {
-        Trip trip = tripsRepo.findById(tripId)
+    @Transactional
+    public NoteDto addNoteToTrip(Long tripId, String text,Long userId) {
+        Trip trip = noteRepo.findByTripIdAndUserId(tripId,userId)
                 .orElseThrow(() -> new RuntimeException("Trip not found"));
 
         Note note = Note.builder()

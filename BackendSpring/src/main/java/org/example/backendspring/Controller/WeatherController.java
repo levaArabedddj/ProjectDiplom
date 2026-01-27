@@ -19,7 +19,6 @@ public class WeatherController {
 
     @Value("${api_weather}")
     private String API_KEY;
-    // пока что опционально добавляем погоду может придумаю еще чет тут
     private final RestTemplate restTemplate;
 
     @Autowired

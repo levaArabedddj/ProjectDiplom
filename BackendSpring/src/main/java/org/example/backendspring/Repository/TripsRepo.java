@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface TripsRepo extends JpaRepository<Trip,Long> {
 
@@ -19,4 +20,9 @@ public interface TripsRepo extends JpaRepository<Trip,Long> {
     @Query("SELECT new org.example.backendspring.Dto.TripDTO.TripDto(t.id, t.cityName, t.startDate) " +
             "FROM Trip t WHERE t.user.user_id = :userId")
     List<TripDto> findAllByUserIdNew(@Param("userId") Long userId);
+
+    @Query("SELECT t FROM Trip t LEFT JOIN FETCH t.bookings WHERE t.id = :tripId AND t.user.user_id = :userId")
+    Optional<Trip> findByIdAndUserId(@Param("tripId") Long tripId, @Param("userId") Long userId);
+
+
 }

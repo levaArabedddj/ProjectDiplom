@@ -3,6 +3,7 @@ package org.example.backendspring.Repository;
 import org.example.backendspring.Dto.PlaceToVisitDto;
 import org.example.backendspring.Entity.PlaceToVisitTrips;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,4 +21,7 @@ public interface PlaceVisitRepo extends JpaRepository<PlaceToVisitTrips, Long> {
             "FROM PlaceToVisitTrips p WHERE p.trip.id = :tripId")
     List<PlaceToVisitDto> findDtosByTripId(@Param("tripId") Long tripId);
 
+    @Modifying
+    @Query("DELETE FROM PlaceToVisitTrips p WHERE p.id = :placeId AND p.trip.user.user_id = :userId")
+    int deleteByIdAndOwner(Long placeId, Long userId);
 }

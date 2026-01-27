@@ -154,8 +154,9 @@ public class TripsController {
     }
 
     @PostMapping("/{tripId}/note")
-    public NoteDto createNote(@PathVariable Long tripId, @RequestBody String text) {
-        return tripsService.addNoteToTrip(tripId, text);
+    public NoteDto createNote(@PathVariable Long tripId, @RequestBody String text,
+                              @AuthenticationPrincipal MyUserDetails user) throws AccessDeniedException {
+        return tripsService.addNoteToTrip(tripId, text,user.getUser_id());
     }
 
     // 2. Отметить как выполненное (переключатель)
