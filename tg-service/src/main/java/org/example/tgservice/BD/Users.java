@@ -21,6 +21,7 @@ public class Users {
     private long user_id;
     @Column(unique = true)
     private String gmail;
+
     private String password;
     @Column(unique = true)
     private String userName;

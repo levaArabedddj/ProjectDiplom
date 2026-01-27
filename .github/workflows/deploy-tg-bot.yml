@@ -19,10 +19,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-
       - name: Build with Maven
-        run: mvn clean package -DskipTests -DfinalName=app2
         working-directory: ./tg-service
+        run: |
+          mvn clean package -DskipTests
+          mv target/*.jar target/app2.jar
 
       - name: Copy JAR to Server
         uses: appleboy/scp-action@master
@@ -30,10 +31,9 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "tg-service/target/app2.jar"  # Берем конкретный файл
+          source: "tg-service/target/app2.jar"
           target: "/root/Java-jar-files/"
           strip_components: 2
-
 
       - name: Restart Docker Container
         uses: appleboy/ssh-action@master
