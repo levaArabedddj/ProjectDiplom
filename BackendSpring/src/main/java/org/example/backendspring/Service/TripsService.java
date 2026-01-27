@@ -164,10 +164,10 @@ public class TripsService {
     public List<TripDto> getAllTrips(Long userId) {
         List<Trip> tripList = tripsRepo.findAllByUserId(userId);
         return tripList.stream().
-                map(dto -> new TripDto().builder()
-                .id(dto.getId())
-                .cityName(dto.getCityName())
-                .startDate(dto.getStartDate()).
+                map(trip -> TripDto.builder()
+                .id(trip.getId())
+                .cityName(trip.getCityName())
+                .startDate(trip.getStartDate()).
                         build()
         ).collect(Collectors.toList());
     }
