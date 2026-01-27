@@ -46,7 +46,9 @@ jobs:
             
             echo 
             rm -f app.jar
-            mv *.jar app.jar
+            
+            echo 
+            mv BackendSpring*.jar app.jar
             
             echo 
             docker rm -f $(docker ps -a -q --filter name=backend) || true
