@@ -232,19 +232,8 @@ public class TripsService {
     public PlaceToVisitDto getPlaceDetailsForTrip(Long tripId, Long placeId, Long userId)
             throws AccessDeniedException {
 
-        Trip trip = tripsRepo.findById(tripId)
-                .orElseThrow(() -> new RuntimeException("Trip not found: " + tripId));
-
-        // Проверка владельца поездки
-        if (!trip.getUser().getUser_id().equals(userId)) {
-            throw new AccessDeniedException("Trip does not belong to user");
-        }
-
-        PlaceToVisitTrips place = placeVisitRepo
-                .findByIdAndTripId(placeId, tripId)
-                .orElseThrow(() ->
-                        new RuntimeException("Place not found: " + placeId)
-                );
+        PlaceToVisitTrips place = tripsRepo.findSafePlace(placeId, tripId, userId)
+                .orElseThrow(() -> new AccessDeniedException("Place not found or access denied"));
 
         return PlaceToVisitDto.builder()
                 .id(place.getId())

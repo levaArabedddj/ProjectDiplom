@@ -24,5 +24,12 @@ public interface TripsRepo extends JpaRepository<Trip,Long> {
     @Query("SELECT t FROM Trip t LEFT JOIN FETCH t.bookings WHERE t.id = :tripId AND t.user.user_id = :userId")
     Optional<Trip> findByIdAndUserId(@Param("tripId") Long tripId, @Param("userId") Long userId);
 
+    @Query("SELECT p FROM PlaceToVisitTrips p WHERE p.id = :placeId AND" +
+            " p.trip.id = :tripId AND" +
+            " p.trip.user.user_id = :userId")
+    Optional<PlaceToVisitTrips> findSafePlace(@Param("placeId") Long placeId,
+                                              @Param("tripId") Long tripId,
+                                              @Param("userId") Long userId);
+
 
 }
