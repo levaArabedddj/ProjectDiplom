@@ -45,10 +45,11 @@ jobs:
             cd /root/Java-jar-files/
             echo "Restarting TG Bot..."
             
-            # 1. Принудительно останавливаем и удаляем старый контейнер
-            # || true нужно, чтобы скрипт не падал, если контейнера еще нет
-            docker stop java-bot || true
+            docker-compose stop tg-bot || true
+            
+        
+            docker-compose rm -f -s -v tg-bot || true
+            
             docker rm -f java-bot || true
             
-            # 2. Запускаем сборку с нуля
             docker-compose up -d --build tg-bot
