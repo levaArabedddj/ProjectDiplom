@@ -22,6 +22,6 @@ public interface PlaceVisitRepo extends JpaRepository<PlaceToVisitTrips, Long> {
     List<PlaceToVisitDto> findDtosByTripId(@Param("tripId") Long tripId);
 
     @Modifying
-    @Query("DELETE FROM PlaceToVisitTrips p WHERE p.id = :placeId AND p.trip.user.user_id = :userId")
-    int deleteByIdAndOwner(Long placeId, Long userId);
+    @Query("DELETE FROM PlaceToVisitTrips p WHERE p.id = :placeId AND p.trip.id IN (SELECT t.id FROM Trip t WHERE t.user.user_id = :userId)")
+    int deleteByIdAndOwner(@Param("placeId") Long placeId, @Param("userId") Long userId);
 }
