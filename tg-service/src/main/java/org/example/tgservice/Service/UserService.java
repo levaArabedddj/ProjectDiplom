@@ -42,8 +42,8 @@ public class UserService {
         });
     }
 
-    public Optional<Users> linkTelegramAccount(Long chatId, String email, String phone, String name) {
-        return usersRepo.findByGmailAndPhoneAndName(email, phone, name)
+    public Optional<Users> linkTelegramAccount(Long chatId, String email, String name) {
+        return usersRepo.findByGmailAndName(email, name)
                 .map(user -> {
                     user.setTelegramChatId(chatId);
                     return usersRepo.save(user);

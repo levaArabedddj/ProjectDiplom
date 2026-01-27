@@ -18,5 +18,5 @@ public interface UsersRepo extends JpaRepository<Users, Long> {
 
 
      Optional<Users> findByTelegramChatId(Long chatId);
-     Optional<Users> findByGmailAndPhoneAndName(String gmail, String phone, String name);
+     Optional<Users> findByGmailAndName(String gmail, String name);
 }

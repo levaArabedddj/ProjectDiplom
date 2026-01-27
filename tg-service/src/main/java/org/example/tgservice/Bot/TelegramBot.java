@@ -2,10 +2,10 @@ package org.example.tgservice.Bot;
 
 import lombok.extern.slf4j.Slf4j;
 import org.example.tgservice.BD.Feedback;
+import org.example.tgservice.BD.Note;
+import org.example.tgservice.BD.Trip;
 import org.example.tgservice.BD.Users;
-import org.example.tgservice.Repo.FeedbackRepo;
-import org.example.tgservice.Repo.UserRepo;
-import org.example.tgservice.Repo.UsersRepo;
+import org.example.tgservice.Repo.*;
 import org.example.tgservice.Service.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -16,6 +16,9 @@ import org.springframework.web.client.ResourceAccessException;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -24,7 +27,6 @@ import java.util.*;
 public class TelegramBot extends TelegramLongPollingBot {
 
     private final BotConfig botConfig;
-    private final UserRepo userRepository;
     private final UsersRepo usersRepository;
     private final FeedbackRepo feedbackRepo;
     private final OpenAIService openAIService;
@@ -40,11 +42,9 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final UserService userService;
     // хранение состояний для авторизации
     private final Map<Long, Boolean> waitingForEmail = new HashMap<>();
-    private final Map<Long, Boolean> waitingForPhone = new HashMap<>();
     private final Map<Long, Boolean> waitingForName = new HashMap<>();
 
     private final Map<Long, String> tempEmails = new HashMap<>();
-    private final Map<Long, String> tempPhones = new HashMap<>();
     private final Map<Long, String> tempNames = new HashMap<>();
     private final Map<Long,String> waitingForCode = new HashMap<>();
     private final Map<Long, String> tempResetEmails = new HashMap<>();
@@ -54,32 +54,39 @@ public class TelegramBot extends TelegramLongPollingBot {
     private final Map<Long, Boolean> waitingForNewPassword = new HashMap<>();
     private final Map<Long,Boolean> waitingForEmailReset = new HashMap<>();
 
+    private final TripsRepo tripRepo;
+    private final NoteRepo noteRepo;
     @Autowired
     private PasswordEncoder passwordEncoder;
     private final MailService mailService;
 
     @Autowired
-    public TelegramBot(BotConfig botConfig, UserRepo userRepository, UsersRepo usersRepository, FeedbackRepo feedbackRepo,
+    public TelegramBot(BotConfig botConfig,  UsersRepo usersRepository, FeedbackRepo feedbackRepo,
                        OpenAIService openAIService, GoogleSheetsService googleSheetsService,
-                       TrelloService trelloService, UserService userService, MailService mailService) {
+                       TrelloService trelloService, UserService userService, TripsRepo tripRepo, NoteRepo noteRepo, MailService mailService) {
         this.botConfig = botConfig;
-        this.userRepository = userRepository;
         this.usersRepository = usersRepository;
         this.feedbackRepo = feedbackRepo;
         this.openAIService = openAIService;
         this.googleSheetsService = googleSheetsService;
         this.trelloService = trelloService;
         this.userService = userService;
+        this.tripRepo = tripRepo;
+        this.noteRepo = noteRepo;
         this.mailService = mailService;
     }
 
-    // Добавить администратора тг-бота который будет просматривать жалобы,
-    // и сообщения и возможность пересылку этих сообщения юзерам
-
     @Override
     public void onUpdateReceived(Update update) {
+
+        if (update.hasCallbackQuery()) {
+            handleCallback(update.getCallbackQuery());
+            return;
+        }
+
         if (!update.hasMessage() || !update.getMessage().hasText()) return;
 
+        if (update.hasMessage() && update.getMessage().hasText()) {
         Long chatId = update.getMessage().getChatId();
         String text = update.getMessage().getText();
 
@@ -120,17 +127,11 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         if (waitingForEmail.getOrDefault(chatId, false)) {
             tempEmails.put(chatId, text.trim());
-            sendMessage(chatId, "📱 Теперь введите ваш телефон:");
-            waitingForEmail.remove(chatId);
-            waitingForPhone.put(chatId, true);
-            return;
-        }
 
-        if(waitingForPhone.getOrDefault(chatId,false)){
-            tempPhones.put(chatId, text.trim());
-            sendMessage(chatId,"Введите ваше имя записанное при регистрации на сайте");
-            waitingForPhone.remove(chatId);
-            waitingForName.put(chatId, true);
+            sendMessage(chatId, "👤 Введите ваше имя (как указано при регистрации на сайте):");
+            waitingForEmail.remove(chatId);
+
+            waitingForName.put(chatId, true);     // СТАВИМ ЭТО
             return;
         }
 
@@ -138,30 +139,28 @@ public class TelegramBot extends TelegramLongPollingBot {
             tempNames.put(chatId, text.trim());
 
             String email = tempEmails.get(chatId);
-            String phone = tempPhones.get(chatId);
             String name = tempNames.get(chatId);
- // поменять тут имя на никнейм
-            Optional<Users> usersOptional = usersRepository.findByGmailAndPhoneAndName(email, phone, name);
+
+
+            Optional<Users> usersOptional = usersRepository.findByGmailAndName(email, name);
 
             if (usersOptional.isPresent()) {
                 Users users = usersOptional.get();
                 if (users.getTelegramChatId() != null) {
-                    sendMessage(chatId, "Эта учетная запись уже авторизована, вы не можете дважды авторизоватся в учетной записи");
+                    sendMessage(chatId, "Эта учетная запись уже авторизована.");
                 } else {
-                    userService.linkTelegramAccount(chatId, email, phone, name)
+                    userService.linkTelegramAccount(chatId, email, name)
                             .ifPresentOrElse(
                                     user -> sendMessage(chatId, "✅ Авторизация успешна! Привязка к аккаунту: " + user.getUserName()),
-                                    () -> sendMessage(chatId, "❌ Неверный email, телефон или имя. Попробуйте снова.")
+                                    () -> sendMessage(chatId, "❌ Ошибка при привязке. Попробуйте снова.")
                             );
                 }
             } else {
-                sendMessage(chatId, "❌ Неверный email, телефон или имя. Попробуйте снова.");
+                sendMessage(chatId, "❌ Пользователь с таким Email и Именем не найден.");
             }
 
-            // Очистка временных данных в любом случае
             waitingForName.remove(chatId);
             tempEmails.remove(chatId);
-            tempPhones.remove(chatId);
             tempNames.remove(chatId);
         }
 
@@ -275,6 +274,12 @@ public class TelegramBot extends TelegramLongPollingBot {
             tempResetEmails.remove(chatId);
         }
 
+            if (text.equalsIgnoreCase("/note")) {
+                handleNoteCommand(chatId);
+                return;
+            }
+
+    }
     }
 
     private String genereatCode() {
@@ -434,6 +439,89 @@ public class TelegramBot extends TelegramLongPollingBot {
         return false;
     }
 
+    private void handleNoteCommand(Long chatId) {
+        // 1. Находим юзера по chatId
+        Optional<Users> userOpt = userService.findByTelegramChatId(chatId);
+
+        if (userOpt.isEmpty()) {
+            sendMessage(chatId, "⚠️ Ви не авторизовані. Введіть /login");
+            return;
+        }
+
+        Users user = userOpt.get();
+
+        // 2. Находим поездки юзера (предполагаю метод findByUser)
+        List<Trip> trips = tripRepo.findAllByUser(user);
+
+        if (trips.isEmpty()) {
+            sendMessage(chatId, "📭 У вас поки немає запланованих подорожей.");
+            return;
+        }
+
+        // 3. Создаем кнопки
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+        for (Trip trip : trips) {
+            List<InlineKeyboardButton> row = new ArrayList<>();
+
+            var button = new InlineKeyboardButton();
+            // Текст на кнопке: Город (ID)
+            button.setText("🌍 " + trip.getCityName() + " (ID: " + trip.getId() + ")");
+
+            // Скрытые данные кнопки: ПРЕФИКС_АЙДИ (чтобы понять, что нажали)
+            button.setCallbackData("NOTE_TRIP_" + trip.getId());
+
+            row.add(button);
+            rows.add(row);
+        }
+
+        markup.setKeyboard(rows);
+
+        // 4. Отправляем сообщение с кнопками
+        SendMessage message = SendMessage.builder()
+                .chatId(chatId.toString())
+                .text("📋 Оберіть подорож, щоб переглянути нотатки:")
+                .replyMarkup(markup)
+                .build();
+
+        try {
+            execute(message);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void handleCallback(org.telegram.telegrambots.meta.api.objects.CallbackQuery callbackQuery) {
+        String data = callbackQuery.getData(); // Например: "NOTE_TRIP_5"
+        Long chatId = callbackQuery.getMessage().getChatId();
+
+        // Проверяем, что нажата именно кнопка нотаток
+        if (data.startsWith("NOTE_TRIP_")) {
+            // Вырезаем ID поездки из строки
+            String tripIdStr = data.substring(10); // Длина "NOTE_TRIP_" = 10
+            Long tripId = Long.parseLong(tripIdStr);
+
+            // Ищем заметки в базе
+            List<Note> notes = noteRepo.findAllByTripId(tripId);
+
+            if (notes.isEmpty()) {
+                sendMessage(chatId, "📝 Для цієї подорожі ще немає нотаток.");
+                return;
+            }
+
+            // Формируем красивый список
+            StringBuilder sb = new StringBuilder();
+            sb.append("📒 **Ваші нотатки:**\n\n");
+
+            for (Note note : notes) {
+                sb.append("🔹 ").append(note.getText())
+                        .append("\n");
+            }
+
+            sendMessage(chatId, sb.toString());
+        }
+    }
     @Override
     public String getBotUsername() {
         return botConfig.getBotName();

@@ -146,12 +146,12 @@
           <p>Завантаження QR-коду...</p>
         </div>
         <div v-else>
-          <p>1. Скануйте цей код у Google Authenticator:</p>
+          <p>1. Скануйте цей код (Microsoft Authenticator або камерою):</p>
           <qrcode-vue :value="qrUrl" :size="200" level="H" />
 
           <div style="margin: 15px 0; background: rgba(255,255,255,0.1); padding: 10px; border-radius: 8px;">
             <p style="font-size: 12px; opacity: 0.7; margin: 0;">Не сканується? Введіть вручну:</p>
-            <strong style="font-size: 18px; letter-spacing: 2px; color: #4ade80;">{{ manualSecret }}</strong>
+            <strong style="font-size: 25px; letter-spacing: 2px; color: #4ade80;">{{ manualSecret }}</strong>
           </div>
           <p>2. Введіть код із додатка:</p>
           <input v-model="code" type="number" placeholder="123456" />
