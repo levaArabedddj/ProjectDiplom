@@ -144,7 +144,6 @@ public class UserPreferencesController {
         return ResponseEntity.ok(mlResponse);
     }
 
-
     @GetMapping("/me")
     public ResponseEntity<UserDto> getCurrentProfileUser(Authentication authentication) throws UserPrincipalNotFoundException {
        UserDto userDto =  userPreferencesService.getCurrentUser(authentication);
