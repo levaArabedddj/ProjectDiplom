@@ -60,21 +60,12 @@ public class UserPreferencesService {
         preferences.setInterests(request.getInterests());
         preferences.setUser(users);
 
-        // теперь это просто
         preferences.setVisitedPlaces(request.getVisitedPlaces());
         preferences.setDislikedPlaces(request.getDislikedPlaces());
 
 
         userPreferencesRepository.save(preferences);
     }
-
-//    public List<FavoritePlaceDto> getFavoritePlaces(Long userId) {
-//        return placeRepo.findAllByNotification_UserIdAndLikedTrue(userId)
-//                .stream()
-//                .map(likedPlace ->
-//                        new FavoritePlaceDto(likedPlace.getName(),likedPlace.))
-//                .toList();
-//    }
 
     public List<FavoritePlaceDto> getFavoritesPlaces(Users users) {
         return favoriteRepo.findAllByUser(users).stream()
@@ -115,7 +106,6 @@ public class UserPreferencesService {
 
 
     public List<AIPreferenceResponse> getUserPreference(Long userId) {
-
         List<UserAIPreference> list = userAIPreferenceRepository.findAllByUserId(userId);
 
         return list.stream().map(p -> new AIPreferenceResponse(

@@ -60,7 +60,6 @@ public class UserPreferencesController {
         // Сохраняем предпочтения
         userPreferencesService.saveUserPreferences(request,userId);
 
-
         // Преобразуем DTO в JSON
         String userJson = new ObjectMapper().writeValueAsString(request);
 
@@ -80,8 +79,6 @@ public class UserPreferencesController {
             mailService.sendRecommendationEmail(gmail, greeting, places);
         });
 
-        // Отдаём фронту результат
-        //return gptResponse;
         return "сохранение данных";
     }
 

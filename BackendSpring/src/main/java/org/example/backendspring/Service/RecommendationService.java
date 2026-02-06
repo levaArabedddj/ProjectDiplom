@@ -12,7 +12,9 @@ import org.example.backendspring.Entity.RecommendedPlace;
 import org.example.backendspring.Repository.NotificationRepo;
 import org.example.backendspring.Repository.RecommendedPlaceRepo;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -22,27 +24,33 @@ public class RecommendationService {
     private final RecommendedPlaceRepo placeRepository;
     private final ObjectMapper objectMapper;
 
+    @Transactional
     public Notification saveGptRecommendations(Long userId, JsonNode gptResponse) throws JsonProcessingException {
-        // Парсим JSON в DTO
         GptRecommendationsResponse dto = objectMapper.treeToValue(gptResponse, GptRecommendationsResponse.class);
-
-        // Создаём уведомление
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setTitle(dto.getGreeting());
 
-        notificationRepository.save(notification);
+        Notification savedNotification = notificationRepository.save(notification);
+        List<RecommendedPlace> places = new ArrayList<>();
 
-        // Сохраняем места
-        for (String placeName : dto.getRecommended_places()) {
-            RecommendedPlace place = new RecommendedPlace();
-            place.setName(placeName);
-            place.setNotification(notification);
-            placeRepository.save(place);
+        if (dto.getRecommended_places() != null) {
+            for (String placeName : dto.getRecommended_places()) {
+                RecommendedPlace place = new RecommendedPlace();
+                place.setName(placeName);
+                place.setNotification(savedNotification);
+                places.add(place);
+            }
         }
 
-        return notification;
+        if (!places.isEmpty()) {
+            placeRepository.saveAll(places);
+        }
+
+        return savedNotification;
     }
+
+
 
     public String likePlace(Long placeId) {
         RecommendedPlace place = placeRepository.findById(placeId)

@@ -294,44 +294,21 @@ public class TripsService {
     public NoteDto toggleNoteStatus(Long tripId, Long noteId, Long userId)
             throws AccessDeniedException {
 
-        // Сначала находим поездку и проверяем владельца
-        Trip trip = tripsRepo.findById(tripId)
-                .orElseThrow(() -> new RuntimeException("Trip not found"));
-
-        if (!trip.getUser().getUser_id().equals(userId)) {
-            throw new AccessDeniedException("Ви не имеете доступа к этой поездке");
-        }
-
-        // Находим заметку и проверяем, принадлежит ли она именно этой поездке
-        Note note = noteRepo.findById(noteId)
-                .orElseThrow(() -> new RuntimeException("Note not found"));
-
-        if (!note.getTrip().getId().equals(tripId)) {
-            throw new RuntimeException("Эта заметка не относится к указанной поездке");
-        }
+        Note note = noteRepo.findByIdAndTripIdAndUserId(noteId, tripId, userId)
+                .orElseThrow(() -> new AccessDeniedException("Note not found or access denied"));
 
         note.setCompleted(!note.isCompleted());
         Note updatedNote = noteRepo.save(note);
 
-        return NoteDto.fromEntity(updatedNote);    }
+        return NoteDto.fromEntity(updatedNote);
+    }
 
     // 12. Удалить заметку
     public void deleteNote(Long tripId, Long noteId, Long userId)
             throws AccessDeniedException {
 
-        Trip trip = tripsRepo.findById(tripId)
-                .orElseThrow(() -> new RuntimeException("Trip not found"));
-
-        if (!trip.getUser().getUser_id().equals(userId)) {
-            throw new AccessDeniedException("Ви не имеете доступа к этой поездке");
-        }
-
-        Note note = noteRepo.findById(noteId)
-                .orElseThrow(() -> new RuntimeException("Note not found"));
-
-        if (!note.getTrip().getId().equals(tripId)) {
-            throw new RuntimeException("Заметка не принадлежит этой поездке");
-        }
+        Note note = noteRepo.findByIdAndTripIdAndUserId(noteId, tripId, userId)
+                .orElseThrow(() -> new AccessDeniedException("Note not found or access denied"));
 
         noteRepo.delete(note);
     }
@@ -348,15 +325,10 @@ public class TripsService {
     @Transactional
     public TripDto updateTrip(Long tripId, TripDto tripDto, Long userId) {
         // 1. Ищем поездку
-        Trip trip = tripsRepo.findById(tripId)
-                .orElseThrow(() -> new RuntimeException("Поездка не найдена"));
+        Trip trip = tripsRepo.findByIdAndUserUserid(tripId,userId).orElseThrow(
+                () -> new RuntimeException("Trip not found or User"));
 
-        // 2. Проверяем, принадлежит ли она текущему юзеру (безопасность)
-        if (!trip.getUser().getUser_id().equals(userId)) {
-            throw new RuntimeException("У вас нет прав на редактирование этой поездки");
-        }
-
-        // 3. Обновляем поля, если они пришли (не null)
+        // 2. Обновляем поля, если они пришли (не null)
         if (tripDto.getCityName() != null) {
             trip.setCityName(tripDto.getCityName());
         }
@@ -392,15 +364,12 @@ public class TripsService {
     }
 
     public Trip addBookingToTrip(Long tripId, Long bookingId, Long userId) {
-        Trip trip = tripsRepo.findById(tripId)
-                .orElseThrow(() -> new RuntimeException("Trip not found"));
 
-        Booking booking = bookingRepo.findById(bookingId)
-                .orElseThrow(() -> new RuntimeException("Booking not found"));
+        Trip trip = tripsRepo.findByIdAndUserUserid(tripId, userId)
+                .orElseThrow(() -> new RuntimeException("Trip not found or access denied"));
 
-        if (!booking.getUser().getUser_id().equals(userId)) {
-            throw new RuntimeException("Access denied: You can only add your own bookings");
-        }
+        Booking booking = bookingRepo.findByIdAndUserId(bookingId,userId).orElseThrow(
+                ()-> new RuntimeException("Booking not found"));
 
         booking.setTrip(trip);
         bookingRepo.save(booking);

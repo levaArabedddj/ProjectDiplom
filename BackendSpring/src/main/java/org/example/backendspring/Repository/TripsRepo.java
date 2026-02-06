@@ -31,5 +31,7 @@ public interface TripsRepo extends JpaRepository<Trip,Long> {
                                               @Param("tripId") Long tripId,
                                               @Param("userId") Long userId);
 
+    @Query("SELECT t FROM Trip t Where t.id = :tripId AND t.user.user_id = :userId ")
+    Optional<Trip> findByIdAndUserUserid(@Param("tripId") Long tripId, @Param("userId") Long userId);
 
 }
