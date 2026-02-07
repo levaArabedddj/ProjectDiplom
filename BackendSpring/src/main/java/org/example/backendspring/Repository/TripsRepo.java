@@ -34,4 +34,7 @@ public interface TripsRepo extends JpaRepository<Trip,Long> {
     @Query("SELECT t FROM Trip t Where t.id = :tripId AND t.user.user_id = :userId ")
     Optional<Trip> findByIdAndUserUserid(@Param("tripId") Long tripId, @Param("userId") Long userId);
 
+
+    @Query("SELECT COUNT(t) > 0 FROM Trip t WHERE t.id = :tripId AND t.user.user_id = :userId")
+    boolean existsByTripIdAndUserId(@Param("tripId") Long tripId, @Param("userId") Long userId);
 }

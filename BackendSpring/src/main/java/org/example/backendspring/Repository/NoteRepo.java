@@ -1,5 +1,6 @@
 package org.example.backendspring.Repository;
 
+import org.example.backendspring.Dto.TripDTO.NoteDto;
 import org.example.backendspring.Entity.Note;
 import org.example.backendspring.Entity.Trip;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -17,4 +18,9 @@ public interface NoteRepo extends JpaRepository<Note, Long> {
 
     @Query("SELECT n FROM Note n   JOIN n.trip t  WHERE n.id = :noteId  AND t.id = :tripId  AND t.user.user_id = :userId")
     Optional<Note> findByIdAndTripIdAndUserId(@Param("noteId") Long noteId,  @Param("tripId") Long tripId,  @Param("userId") Long userId);
+
+    @Query("SELECT new org.example.backendspring.Dto.TripDTO.NoteDto(n.id, n.text, n.completed, n.createdAt) " +
+            "FROM Note n WHERE n.trip.id = :tripId " +
+            "ORDER BY n.createdAt DESC")
+    List<NoteDto> findDtosByTripId(@Param("tripId") Long tripId);
 }

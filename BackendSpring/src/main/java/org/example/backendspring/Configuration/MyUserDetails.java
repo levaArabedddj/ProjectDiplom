@@ -5,6 +5,7 @@ import io.jsonwebtoken.Claims;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.example.backendspring.Entity.Users;
 import org.example.backendspring.Enun.UserRole;
 import org.springframework.security.core.GrantedAuthority;
@@ -15,6 +16,7 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 
+@Slf4j
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -52,6 +54,7 @@ public class MyUserDetails implements UserDetails, Serializable  {
                 try {
                     userDetails.setUser_id(Long.parseLong(idObject.toString()));
                 } catch (NumberFormatException e) {
+                    log.warn(e.getMessage());
                 }
             }
         }
@@ -68,6 +71,7 @@ public class MyUserDetails implements UserDetails, Serializable  {
             try {
                 userDetails.setRole(UserRole.valueOf(roleObj.toString()));
             } catch (IllegalArgumentException ex) {
+                log.warn(ex.getMessage());
             }
         }
 

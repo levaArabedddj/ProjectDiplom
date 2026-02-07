@@ -260,18 +260,13 @@ public class TripsService {
     }
 
     // 9. Получить все заметки (с проверкой существования поездки)
+    @Transactional(readOnly = true)
     public List<NoteDto> getNotesByTripId(Long tripId, Long userId) throws AccessDeniedException {
-        Trip trip = tripsRepo.findById(tripId)
-                .orElseThrow(() -> new RuntimeException("Trip not found"));
-
-        if (!trip.getUser().getUser_id().equals(userId)) {
-            throw new AccessDeniedException("Ви не маєте доступу до нотаток цієї поїздки");
+        if (!tripsRepo.existsByTripIdAndUserId(tripId, userId)) {
+            throw new AccessDeniedException("Поездка не найдена или доступ запрещен");
         }
 
-        return noteRepo.findAllByTripIdOrderByCreatedAtDesc(tripId).
-                stream()
-                .map(NoteDto::fromEntity).
-                collect(Collectors.toList());
+        return noteRepo.findDtosByTripId(tripId);
     }
 
     // 10. Добавить новую заметку

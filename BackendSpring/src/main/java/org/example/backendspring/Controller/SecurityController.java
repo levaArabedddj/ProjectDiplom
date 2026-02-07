@@ -6,9 +6,7 @@ import org.example.backendspring.Configuration.JwtCore;
 import org.example.backendspring.Configuration.MyUserDetails;
 import org.example.backendspring.Configuration.SigninRequest;
 import org.example.backendspring.Configuration.SignupRequest;
-import org.example.backendspring.Dto.SecurityStatusDto;
 import org.example.backendspring.Entity.Users;
-import org.example.backendspring.Entity.VerificationToken;
 import org.example.backendspring.Enun.UserRole;
 import org.example.backendspring.Repository.UsersRepo;
 import org.example.backendspring.Repository.VerificationTokenRepo;
@@ -19,21 +17,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.mail.MailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.web.bind.annotation.*;
-
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -61,8 +51,6 @@ public class SecurityController {
         this.mailSender = mailSender;
         this.usersService = usersService;
     }
-
-
 
     @PostMapping("/signin")
     ResponseEntity<?> signup(@RequestBody SigninRequest signinRequest) {
@@ -105,8 +93,6 @@ public class SecurityController {
     @Transactional
     @PostMapping("/signup-Login")
     public ResponseEntity<?> signInAuth(@RequestBody SignupRequest signupRequest){
-
-
         if (usersRepo.existsUsersByUserName(signupRequest.getUserName())) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Choose different name");
         }
@@ -137,7 +123,7 @@ public class SecurityController {
             String jwt = jwtCore.generateToken(authentication);
             return ResponseEntity.ok(jwt);
         } catch (Exception e) {
-            e.printStackTrace();
+            log.info(e.getMessage());
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication failed: " + e.getMessage());
         }
 

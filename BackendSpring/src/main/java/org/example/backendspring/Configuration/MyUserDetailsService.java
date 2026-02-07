@@ -1,9 +1,5 @@
 package org.example.backendspring.Configuration;
 
-
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.example.backendspring.Entity.Users;
@@ -18,8 +14,9 @@ import org.springframework.stereotype.Service;
 @Service
 @Slf4j
 public class MyUserDetailsService implements UserDetailsService {
+
     @Autowired
-    private UsersRepo usersRepo;
+    private  UsersRepo usersRepo;
 
     @Override
     @Transactional

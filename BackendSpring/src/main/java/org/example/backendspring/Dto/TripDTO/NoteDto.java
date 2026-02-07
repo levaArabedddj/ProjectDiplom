@@ -27,4 +27,11 @@ public class NoteDto {
                 .createdAt(note.getCreatedAt())
                 .build();
     }
+
+    public NoteDto(boolean completed, LocalDateTime createdAt, Long id, String text) {
+        this.completed = completed;
+        this.createdAt = createdAt;
+        this.id = id;
+        this.text = text;
+    }
 }

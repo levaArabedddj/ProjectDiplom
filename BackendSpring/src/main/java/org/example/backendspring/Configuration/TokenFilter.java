@@ -8,7 +8,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.cache.CacheManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -25,13 +24,8 @@ import java.util.stream.Collectors;
 public class TokenFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(TokenFilter.class);
-
     private final JwtCore jwtCore;
-
     private static final Logger timingLogger = LoggerFactory.getLogger("TimingLogger");
-
-
-
 
     public TokenFilter(@NonNull JwtCore jwtCore) {
         this.jwtCore = jwtCore;
