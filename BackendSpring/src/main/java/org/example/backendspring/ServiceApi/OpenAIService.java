@@ -31,6 +31,7 @@ public class OpenAIService {
     @Value("${spring.ai.openai.api-key}")
     private String openAiApiKey;
 
+
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final String OPENAI_URL = "https://api.openai.com/v1/chat/completions";
