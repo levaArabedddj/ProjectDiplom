@@ -3,7 +3,7 @@ on:
   push:
     branches: ["develop"]
     paths:
-      - 'tg-service/**'
+      - 'BackendSpring/**'
 
 jobs:
   test-and-build:
@@ -20,5 +20,5 @@ jobs:
           cache: maven
 
       - name: Run Tests and Build
-        working-directory: ./tg-service
+        working-directory: ./BackendSpring
         run: mvn clean verify
