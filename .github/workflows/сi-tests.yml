@@ -1,4 +1,4 @@
-name: 1. CI - Check PR (TG Bot)
+name: 1. CI - Code Quality (Backend)
 on:
   push:
     branches: ["develop"]
@@ -6,7 +6,7 @@ on:
       - 'BackendSpring/**'
 
 jobs:
-  test-and-build:
+  quality-gate:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,6 +19,30 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run Tests and Build
+      - name: Check Code Style (Checkstyle)
+        working-directory: ./BackendSpring
+        run: mvn checkstyle:check
+        continue-on-error: true
+
+      - name: Static Code Analysis
+        working-directory: ./BackendSpring
+        run: mvn pmd:check spotbugs:check
+        continue-on-error: true
+
+      - name: Compile Code (No Tests Execution)
         working-directory: ./BackendSpring
         run: mvn clean test-compile
+
+      - name: Dependency Vulnerability Check
+        working-directory: ./BackendSpring
+        run: mvn org.owasp:dependency-check-maven:check
+        continue-on-error: true
+
+      - name: Upload Analysis Reports
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: backend-ci-reports
+          path: |
+            BackendSpring/target/dependency-check-report.html
+          retention-days: 7
