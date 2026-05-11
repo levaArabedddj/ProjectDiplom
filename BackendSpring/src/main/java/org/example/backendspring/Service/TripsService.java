@@ -64,8 +64,8 @@ public class TripsService {
     // 1. Создание поездки
     @Transactional
     public void createTrip(TripDto trip, Long userId) {
-        Users users = usersRepo.findById(userId).
-                orElseThrow(()-> new RuntimeException("User not found"));
+        Users users = usersRepo.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
         Trip trip1 = new Trip();
         trip1.setCityName(trip.getCityName());
         trip1.setStartDate(trip.getStartDate());
@@ -144,7 +144,7 @@ public class TripsService {
             }
 
             // 2. Запрос активностей по найденным координатам
-            int limit = 50;
+            int limit = 40;
             String activitiesUrl = "https://test.api.amadeus.com/v1/shopping/activities"
                     + "?latitude=" + lat
                     + "&longitude=" + lon
