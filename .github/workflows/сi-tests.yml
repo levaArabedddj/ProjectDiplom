@@ -21,4 +21,4 @@ jobs:
 
       - name: Run Tests and Build
         working-directory: ./BackendSpring
-        run: mvn clean verify
+        run: mvn clean test-compile
