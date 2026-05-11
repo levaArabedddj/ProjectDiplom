@@ -30,7 +30,7 @@ jobs:
         with:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }} # <-- УБРАЛ ЛИШНЕЕ ТИРЕ
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "BackendSpring/target/*.jar"
           target: "/root/Java-jar-files/"
           strip_components: 2
