@@ -144,7 +144,7 @@ public class TripsService {
             }
 
             // 2. Запрос активностей по найденным координатам
-            int limit = 40;
+            int limit = 55;
             String activitiesUrl = "https://test.api.amadeus.com/v1/shopping/activities"
                     + "?latitude=" + lat
                     + "&longitude=" + lon
