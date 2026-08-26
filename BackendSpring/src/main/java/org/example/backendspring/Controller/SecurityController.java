@@ -11,10 +11,12 @@ import org.example.backendspring.Enun.UserRole;
 import org.example.backendspring.Repository.UsersRepo;
 import org.example.backendspring.Repository.VerificationTokenRepo;
 import org.example.backendspring.Service.MailService;
+import org.example.backendspring.Service.SMSService;
 import org.example.backendspring.Service.UsersService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.crossstore.ChangeSetPersister;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,9 +42,10 @@ public class SecurityController {
     private final VerificationTokenRepo verificationTokenRepo;
     private final MailService mailSender;
     private final UsersService usersService;
+    private final SMSService smsService;
 
     @Autowired
-    public SecurityController(UsersRepo usersRepo, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtCore jwtCore, VerificationTokenRepo verificationTokenRepo, MailService mailSender, UsersService usersService) {
+    public SecurityController(UsersRepo usersRepo, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtCore jwtCore, VerificationTokenRepo verificationTokenRepo, MailService mailSender, UsersService usersService, SMSService smsService) {
         this.usersRepo = usersRepo;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
@@ -50,6 +53,7 @@ public class SecurityController {
         this.verificationTokenRepo = verificationTokenRepo;
         this.mailSender = mailSender;
         this.usersService = usersService;
+        this.smsService = smsService;
     }
 
     @PostMapping("/signin")
@@ -114,6 +118,11 @@ public class SecurityController {
         user.setSurname(signupRequest.getSurName());
         usersRepo.save(user);
 
+        try {
+         smsService.sendRegistrationEvent(user.getUser_id() ,signupRequest.getGmail(), signupRequest.getPhone());
+        }catch (Exception ex){
+         log.error(ex.getMessage());
+        }
 
         try {
             // Автоматична авторизація
