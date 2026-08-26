@@ -4,6 +4,7 @@ package org.example.backendspring.Configuration;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -26,6 +27,7 @@ public class JwtCore {
     private Long lifeTime;
 
     private SecretKey secretKey;
+
 
     @PostConstruct
     public void init() {
@@ -63,15 +65,40 @@ public class JwtCore {
 
     public boolean isValidToken(String token) {
         try {
-            Jwts.parser()
+            Claims claims = Jwts.parser()
                     .setSigningKey(secretKey)
                     .build()
-                    .parseClaimsJws(token);
-            return true;
-        } catch (JwtException ex) {
+                    .parseClaimsJws(token)
+                    .getBody();
+
+            return isClaimsValid(claims);
+
+        } catch (JwtException | IllegalArgumentException ex) {
             return false;
         }
     }
+
+    private boolean isClaimsValid(Claims claims) {
+        Object idObject = claims.get("userId");
+
+        if (idObject == null) {
+            return false;
+        }
+
+        long userId;
+        try {
+            if (idObject instanceof Number) {
+                userId = ((Number) idObject).longValue();
+            } else {
+                userId = Long.parseLong(idObject.toString());
+            }
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        return userId > 0;
+    }
+
+
 
     public Claims getAllClaimsFromToken(String token) {
         Jws<Claims> jws = Jwts.parser()

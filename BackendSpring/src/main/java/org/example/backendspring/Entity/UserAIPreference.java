@@ -19,7 +19,7 @@ public class UserAIPreference {
     @Column(nullable = false)
     private PreferenceType type;
 
-    @Column(nullable = false, length = 500)
+    @Column(name = "pref_value", nullable = false, length = 500)
     private String value;
 
     @Column(nullable = false)
